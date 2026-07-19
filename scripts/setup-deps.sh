@@ -11,8 +11,17 @@
 #
 # All path deps are independent repos under muskitty-dev/.
 #
+# Auth: GitHub sometimes rate-limits anonymous git clones from CI runners,
+# returning 401 and prompting for a username (which fails in non-interactive
+# shells). When GH_TOKEN is provided via env, rewrite https://github.com/ URLs
+# to use x-access-token auth. This works for any public repo the token can read.
+#
 # Idempotent: skips clones that already exist (useful for local re-runs).
 set -euo pipefail
+
+if [ -n "${GH_TOKEN:-}" ]; then
+    git config --global "url.https://x-access-token:${GH_TOKEN}@github.com/".insteadOf "https://github.com/"
+fi
 
 clone_if_absent() {
     local url="$1"
