@@ -1,57 +1,52 @@
 //! Selectors Level 4 parser entry points.
 //!
 //! Implements the §18 "API Hooks" Parse A Selector / Parse A Relative
-//! Selector algorithms by delegating to the submodule parsers.
+//! Selector algorithms by routing through the CSS Syntax §5.4.1
+//! `parse_a_grammar` pipeline: normalize → consume a list of
+//! component values → match against the Selectors grammar via
+//! [`SelectorGrammar`] / [`RelativeSelectorGrammar`].
 //!
 //! Spec source: `D:\CSSWG\selectors-4\Overview.md`, §18 L4816-5026
-//! (API hooks), §3 L4640-4815 (grammar).
+//! (API hooks), §3 L4640-4815 (grammar); `D:\CSSWG\css-syntax-3\Overview.md`,
+//! §5.4.1 L1895-1944 (parse something according to a CSS grammar).
 
 pub mod an_plus_b;
 pub mod complex;
 pub mod compound;
+pub mod cv_adapter;
+pub mod grammar;
 pub mod list;
 pub mod relative;
 pub mod simple;
 
+pub use grammar::{RelativeSelectorGrammar, SelectorGrammar};
+
 use crate::error::SelectorParseError;
 use crate::types::SelectorList;
-use muskitty_css::parser::TokenStream;
-use muskitty_css::tokenizer::Token;
+use muskitty_css::parser::parse_a_grammar;
 
 /// §18 L4828-4849: Parse A Selector.
 ///
-/// Tokenises `source` with the muskitty-css tokenizer and parses the
-/// resulting token stream as a `<complex-selector-list>` per §3
-/// L4651-4653. Returns the parsed [`SelectorList`] on success, or a
+/// Routes `source` through the CSS Syntax §5.4.1 pipeline (normalize
+/// → consume a list of component values → match against
+/// [`SelectorGrammar`]), per §18 L4837: "Let selector be the result of
+/// [=CSS/parsing=] source as a `selector-list`."
+///
+/// Returns the parsed [`SelectorList`] on success, or a
 /// [`SelectorParseError`] describing the failure mode.
 ///
 /// Empty input or whitespace-only input returns
-/// [`SelectorParseError::EmptySelector`] per §3 L1317-1347. Trailing
-/// tokens after the selector list (other than whitespace) produce an
-/// `InvalidSelector` error: a selector source must consume the entire
-/// input.
+/// [`SelectorParseError::EmptySelector`] per §3 L1338 ("an empty
+/// selector is invalid"). Trailing tokens after the selector list
+/// (other than whitespace) produce an `InvalidSelector` error: a
+/// selector source must consume the entire input.
 pub fn parse_a_selector(source: &str) -> Result<SelectorList, SelectorParseError> {
-    let tokens = muskitty_css::tokenize(source);
-    let mut stream = TokenStream::new(tokens);
-
-    // §3 L1317-1347: empty input or whitespace-only input is not a
-    // valid selector list. Distinguish this case from a structurally
-    // invalid selector by returning EmptySelector.
-    stream.discard_whitespace();
-    if matches!(stream.next_token(), Token::Eof) {
-        return Err(SelectorParseError::EmptySelector);
+    match parse_a_grammar(source, &SelectorGrammar) {
+        Ok(inner) => inner,
+        Err(_) => Err(SelectorParseError::InvalidSelector(
+            "css-syntax §5.4.1 pipeline failure".into(),
+        )),
     }
-
-    let list = list::parse_selector_list(&mut stream)?;
-    // Reject trailing garbage (whitespace is fine).
-    stream.discard_whitespace();
-    if !stream.is_empty() {
-        return Err(SelectorParseError::InvalidSelector(format!(
-            "trailing tokens after selector: {:?}",
-            stream.next_token()
-        )));
-    }
-    Ok(list)
 }
 
 /// §18 L4853-4875: Parse A Relative Selector.
@@ -60,24 +55,14 @@ pub fn parse_a_selector(source: &str) -> Result<SelectorList, SelectorParseError
 /// relative selector (relative to an implicit `:scope` element, per
 /// §3 L1051-1102). Used by `:has()` arguments.
 ///
-/// Delegates to [`crate::parser::relative::parse_relative_selector_list`]
-/// after tokenisation.
+/// Routes through the §5.4.1 pipeline with
+/// [`RelativeSelectorGrammar`], per §18 L4862: "Let selector be the
+/// result of [=CSS/parsing=] source as a `relative-selector-list`."
 pub fn parse_a_relative_selector(source: &str) -> Result<SelectorList, SelectorParseError> {
-    let tokens = muskitty_css::tokenize(source);
-    let mut stream = TokenStream::new(tokens);
-
-    stream.discard_whitespace();
-    if matches!(stream.next_token(), Token::Eof) {
-        return Err(SelectorParseError::EmptySelector);
+    match parse_a_grammar(source, &RelativeSelectorGrammar) {
+        Ok(inner) => inner,
+        Err(_) => Err(SelectorParseError::InvalidSelector(
+            "css-syntax §5.4.1 pipeline failure".into(),
+        )),
     }
-
-    let list = relative::parse_relative_selector_list(&mut stream)?;
-    stream.discard_whitespace();
-    if !stream.is_empty() {
-        return Err(SelectorParseError::InvalidSelector(format!(
-            "trailing tokens after relative selector: {:?}",
-            stream.next_token()
-        )));
-    }
-    Ok(list)
 }
