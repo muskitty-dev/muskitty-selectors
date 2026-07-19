@@ -9,10 +9,7 @@
 #   muskitty-selectors → muskitty-css (path) → muskitty-css-parser (path) → muskitty-css-tokenizer (path)
 #   muskitty-selectors [dev-dep] → muskitty-dom (path)
 #
-# Of these:
-#   - muskitty-css-parser, muskitty-css-tokenizer, muskitty-dom are independent repos under muskitty-dev/
-#   - muskitty-css is NOT an independent repo; it lives in the main MusKitty repo (Ink-dark/MusKitty).
-#     We shallow-clone the main repo and move crates/muskitty-css into place.
+# All path deps are independent repos under muskitty-dev/.
 #
 # Idempotent: skips clones that already exist (useful for local re-runs).
 set -euo pipefail
@@ -27,16 +24,7 @@ clone_if_absent() {
     fi
 }
 
+clone_if_absent https://github.com/muskitty-dev/muskitty-css.git ../muskitty-css
 clone_if_absent https://github.com/muskitty-dev/muskitty-css-parser.git ../muskitty-css-parser
 clone_if_absent https://github.com/muskitty-dev/muskitty-css-tokenizer.git ../muskitty-css-tokenizer
 clone_if_absent https://github.com/muskitty-dev/muskitty-dom.git ../muskitty-dom
-
-# muskitty-css is not an independent repo; extract from main MusKitty repo.
-if [ -d ../muskitty-css ]; then
-    echo "skip ../muskitty-css (exists)"
-else
-    rm -rf ../MusKitty-main
-    git clone --depth 1 https://github.com/Ink-dark/MusKitty.git ../MusKitty-main
-    mv ../MusKitty-main/crates/muskitty-css ../muskitty-css
-    rm -rf ../MusKitty-main
-fi
