@@ -1,0 +1,20 @@
+[package]
+name = "muskitty-selectors"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.82"
+license = "Apache-2.0"
+description = "Selectors Level 4 parser and matching engine for Rust"
+repository = "https://github.com/muskitty-dev/muskitty-selectors"
+homepage = "https://github.com/muskitty-dev"
+documentation = "https://docs.rs/muskitty-selectors"
+readme = "README.md"
+keywords = ["css", "selectors", "parser", "matcher", "web"]
+categories = ["parser-implementations", "web-programming"]
+authors = ["MusCat / MusKitty Bit-Torch Community"]
+
+[dependencies]
+muskitty-css = { path = "../muskitty-css", version = "0.4.0" }
+
+[dev-dependencies]
+muskitty-dom = { path = "../muskitty-dom" }
