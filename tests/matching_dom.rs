@@ -113,7 +113,7 @@ impl Element for DomElement {
 
     fn child_elements(&self) -> Vec<Self> {
         self.borrow_node()
-            .children
+            .child_nodes()
             .iter()
             .filter(|c| c.borrow().node_type == NodeType::Element)
             .cloned()
@@ -125,7 +125,7 @@ impl Element for DomElement {
         // §13.3 L3837-3845: empty = no element children AND no text
         // children with non-zero length (whitespace-only text counts
         // as empty per L3858-3866).
-        for child in &self.borrow_node().children {
+        for child in self.borrow_node().child_nodes() {
             let child_borrow = child.borrow();
             match child_borrow.node_type {
                 NodeType::Element => return false,
