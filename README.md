@@ -1,5 +1,7 @@
 # muskitty-selectors
 
+[English](README.md) | [简体中文](README.zh-CN.md)
+
 [![crates.io](https://img.shields.io/crates/v/muskitty-selectors.svg)](https://crates.io/crates/muskitty-selectors)
 [![Documentation](https://docs.rs/muskitty-selectors/badge.svg)](https://docs.rs/muskitty-selectors)
 [![License](https://img.shields.io/crates/l/muskitty-selectors.svg)](https://github.com/muskitty-dev/muskitty-selectors/blob/main/LICENSE)
