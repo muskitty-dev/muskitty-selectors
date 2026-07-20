@@ -230,10 +230,3 @@ fn collect_descendants<E: Element>(root: &E) -> Vec<E> {
     walk(root, &mut out);
     out
 }
-
-/// Whether `arg` is one of the An+B pseudo-class argument shapes.
-/// Helper for sanity-checking pseudo-class argument kind.
-#[allow(dead_code)]
-fn is_an_plus_b_arg(arg: &PseudoClassArgument) -> bool {
-    matches!(arg, PseudoClassArgument::AnPlusB(_, _))
-}
