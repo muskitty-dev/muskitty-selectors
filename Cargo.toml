@@ -13,8 +13,12 @@ keywords = ["css", "selectors", "parser", "matcher", "web"]
 categories = ["parser-implementations", "web-programming"]
 authors = ["MusCat / MusKitty Bit-Torch Community"]
 
+[features]
+dom = ["muskitty-dom"]
+
 [dependencies]
 muskitty-css = { path = "../muskitty-css", version = "0.4.0" }
+muskitty-dom = { path = "../muskitty-dom", version = "0.1.0", optional = true }
 
 [dev-dependencies]
 muskitty-dom = { path = "../muskitty-dom" }

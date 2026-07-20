@@ -13,11 +13,14 @@
 //!   §15 combinators.
 //! - [`simple_matcher`] — type / universal / class / id / attribute.
 //! - [`pseudo_matcher`] — tree-structural + An+B + logical combinations.
-//! - [`dom_impl`] — reference impl of `Element` for
-//!   `Rc<RefCell<muskitty_dom::Node>>` (dev-only; not compiled into
-//!   the released library).
+//! - [`dom_impl`] — `Element` impl for `muskitty_dom::Node` (feature
+//!   `dom`). Provides [`DomElement`].
 
+#[cfg(feature = "dom")]
 pub mod dom_impl;
+#[cfg(feature = "dom")]
+pub use dom_impl::DomElement;
+
 pub mod pseudo_matcher;
 pub mod simple_matcher;
 
