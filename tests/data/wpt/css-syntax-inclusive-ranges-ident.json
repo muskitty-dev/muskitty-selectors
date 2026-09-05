@@ -1,0 +1,146 @@
+{
+ "source": "css/css-syntax/inclusive-ranges.html",
+ "cases": [
+  {
+   "kind": "invalid",
+   "input": "foo\u0001",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": "foo\u0002",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": "foo\u0003",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": "foo\u0004",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": "foo\u0005",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": "foo\u0006",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": "foo\u0007",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": "foo\b",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": "foo\u000b",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": "foo\u000e",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": "foo\u000f",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": "foo\u0010",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": "foo\u0011",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": "foo\u0012",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": "foo\u0013",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": "foo\u0014",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": "foo\u0015",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": "foo\u0016",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": "foo\u0017",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": "foo\u0018",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": "foo\u0019",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": "foo\u001a",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": "foo\u001b",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": "foo\u001c",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": "foo\u001d",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": "foo\u001e",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": "foo\u001f",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": "foo",
+   "serializations": []
+  }
+ ],
+ "note": "upstream asserts selectorText round-trip errors; ported as selector invalidity (control chars are not ident code points, leaving trailing tokens)"
+}

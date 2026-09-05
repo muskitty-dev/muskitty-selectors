@@ -1,0 +1,411 @@
+{
+ "source": "css/css-syntax/anb-parsing.html",
+ "cases": [
+  {
+   "kind": "valid",
+   "input": ":nth-child(odd)",
+   "serializations": [
+    ":nth-child(2n+1)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-child(even)",
+   "serializations": [
+    ":nth-child(2n)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-child(1)",
+   "serializations": [
+    ":nth-child(1)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-child(+1)",
+   "serializations": [
+    ":nth-child(1)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-child(-1)",
+   "serializations": [
+    ":nth-child(-1)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-child(5n)",
+   "serializations": [
+    ":nth-child(5n)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-child(5N)",
+   "serializations": [
+    ":nth-child(5n)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-child(+n)",
+   "serializations": [
+    ":nth-child(n)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-child(n)",
+   "serializations": [
+    ":nth-child(n)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-child(N)",
+   "serializations": [
+    ":nth-child(n)"
+   ]
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-child(+ n)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-child(-n)",
+   "serializations": [
+    ":nth-child(-n)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-child(-N)",
+   "serializations": [
+    ":nth-child(-n)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-child(5n-5)",
+   "serializations": [
+    ":nth-child(5n-5)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-child(+n-5)",
+   "serializations": [
+    ":nth-child(n-5)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-child(n-5)",
+   "serializations": [
+    ":nth-child(n-5)"
+   ]
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-child(+ n-5)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-child(-n-5)",
+   "serializations": [
+    ":nth-child(-n-5)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-child(5n +5)",
+   "serializations": [
+    ":nth-child(5n+5)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-child(5n -5)",
+   "serializations": [
+    ":nth-child(5n-5)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-child(+n +5)",
+   "serializations": [
+    ":nth-child(n+5)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-child(n +5)",
+   "serializations": [
+    ":nth-child(n+5)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-child(+n -5)",
+   "serializations": [
+    ":nth-child(n-5)"
+   ]
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-child(+ n +5)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-child(n 5)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-child(-n +5)",
+   "serializations": [
+    ":nth-child(-n+5)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-child(-n -5)",
+   "serializations": [
+    ":nth-child(-n-5)"
+   ]
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-child(-n 5)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-child(5n- 5)",
+   "serializations": [
+    ":nth-child(5n-5)"
+   ]
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-child(5n- -5)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-child(5n- +5)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-child(-5n- 5)",
+   "serializations": [
+    ":nth-child(-5n-5)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-child(+n- 5)",
+   "serializations": [
+    ":nth-child(n-5)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-child(n- 5)",
+   "serializations": [
+    ":nth-child(n-5)"
+   ]
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-child(+ n- 5)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-child(n- +5)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-child(n- -5)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-child(-n- 5)",
+   "serializations": [
+    ":nth-child(-n-5)"
+   ]
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-child(-n- +5)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-child(-n- -5)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-child(5n + 5)",
+   "serializations": [
+    ":nth-child(5n+5)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-child(5n - 5)",
+   "serializations": [
+    ":nth-child(5n-5)"
+   ]
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-child(5n + +5)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-child(5n + -5)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-child(5n - +5)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-child(5n - -5)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-child(+n + 5)",
+   "serializations": [
+    ":nth-child(n+5)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-child(n + 5)",
+   "serializations": [
+    ":nth-child(n+5)"
+   ]
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-child(+ n + 5)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-child(+n - 5)",
+   "serializations": [
+    ":nth-child(n-5)"
+   ]
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-child(+n + +5)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-child(+n + -5)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-child(+n - +5)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-child(+n - -5)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-child(-n + 5)",
+   "serializations": [
+    ":nth-child(-n+5)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-child(-n - 5)",
+   "serializations": [
+    ":nth-child(-n-5)"
+   ]
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-child(-n + +5)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-child(-n + -5)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-child(-n - +5)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-child(-n - -5)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-child(1 - n)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-child(0 - n)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-child(-1 + n)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-child(2 n + 2)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-child(- 2n)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-child(+ 2n)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-child(+2 n)",
+   "serializations": []
+  }
+ ],
+ "note": "serialization not asserted (no serializer); validity only"
+}

@@ -1,0 +1,46 @@
+{
+ "source": "css/css-syntax/ident-three-code-points.html",
+ "cases": [
+  {
+   "kind": "invalid",
+   "input": "#1",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": "#-2",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "#--3",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "#---4",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "#a",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "#-b",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "#--c",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "#---d",
+   "serializations": []
+  }
+ ],
+ "note": "upstream asserts computed background-color (green=valid); ported as selector validity"
+}
