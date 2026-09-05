@@ -615,3 +615,22 @@ fn has_with_child_combinator_matches_only_direct() {
     parent.children.push(direct.clone());
     assert!(matches(&list, &parent));
 }
+
+/// F-4（审计 S-M2）：An+B 超界字面量饱和到 ±i64::MAX/MIN 时匹配不溢出。
+/// 修复前 `index - b` 在 debug 构建下 panic（i64 溢出）、release 回绕错配；
+/// 现全程 i128 运算。
+#[test]
+fn nth_child_saturated_anb_does_not_overflow() {
+    let sibs = build_siblings(3);
+    // B 饱和为 i64::MAX：任何真实 index 都不可能满足 `2n + B`。
+    let list = parse_a_selector(":nth-child(2n + 99999999999999999999)").expect("parses");
+    assert!(!matches(&list, &sibs[0]));
+    assert!(!matches(&list, &sibs[1]));
+    // 纯 B 巨值同理。
+    let list = parse_a_selector(":nth-child(99999999999999999999)").expect("parses");
+    assert!(!matches(&list, &sibs[0]));
+    // A 饱和为 -i64::MAX（`-Nn` 形式）：i128 运算不溢出，结果确定性。
+    let list = parse_a_selector(":nth-child(-99999999999999999999n + 3)").expect("parses");
+    let m = matches(&list, &sibs[0]);
+    assert_eq!(m, matches(&list, &sibs[0]), "match must be deterministic");
+}

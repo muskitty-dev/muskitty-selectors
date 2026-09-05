@@ -125,7 +125,12 @@ fn matches_nth_pseudo_class<E: Element>(pc: &PseudoClass, element: &E) -> bool {
 
 /// §13.5: An+B math. Returns true if `index = A*k + B` for some
 /// non-negative integer `k`. `index` is 1-based per §13.3 L3982.
+///
+/// 审计 F-4：`a`/`b` 来自 An+B 解析对超界字面量的饱和转换（可达
+/// `±i64::MAX/MIN`），`index - b` 与 `diff % a` 在 debug 构建下溢出 panic、
+/// release 下回绕出错配。全程 i128 运算消除溢出，匹配语义不变。
 fn an_plus_b_matches(a: i64, b: i64, index: i64) -> bool {
+    let (a, b, index) = (a as i128, b as i128, index as i128);
     if a == 0 {
         return index == b;
     }

@@ -224,3 +224,22 @@ fn empty_string_fails() {
         result
     );
 }
+
+/// F-4（审计 S-3 解析侧）：复杂选择器单元数封顶 1024 —— 匹配侧
+/// walk_leftward 对每个匹配单元递归，单元数不受限时超长选择器 + 深 DOM
+/// 可栈溢出。超限报 InvalidSelector；上限内正常解析。
+#[test]
+fn complex_selector_unit_count_capped() {
+    use muskitty_selectors::error::SelectorParseError;
+    // 1501 个 `.x`（空格 = 后代组合器）→ 超限。
+    let sel = ".x ".repeat(1500) + ".x";
+    let result = parse_a_selector(&sel);
+    assert!(
+        matches!(result, Err(SelectorParseError::InvalidSelector(_))),
+        "expected InvalidSelector, got {:?}",
+        result
+    );
+    // 101 个单元（远低于上限）→ 正常解析。
+    let sel = ".x ".repeat(100) + ".x";
+    assert!(parse_a_selector(&sel).is_ok());
+}

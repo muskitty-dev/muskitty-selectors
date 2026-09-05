@@ -62,6 +62,14 @@ use muskitty_css::tokenizer::Token;
 /// (`)`, `}`, `]`). The terminator is left unconsumed for the caller
 /// (e.g. `parse_selector_list` consumes `,`; the API entry point
 /// checks for unexpected trailing tokens).
+/// 复杂选择器最大 compound 单元数（审计 F-4）。
+///
+/// 匹配侧 `walk_leftward` 对每个匹配单元递归（约 2 帧/单元），单元数不受限
+/// 时，超长选择器（攻击者可写出任意长度）+ 足够深的 DOM 可栈溢出。解析期
+/// 封顶，超限返回 `InvalidSelector`。1024 远超任何真实样式表（Chromium 的
+/// 每规则选择器上限也是千级），匹配侧栈深 ≤ ~2k 帧，安全。
+const MAX_COMPLEX_SELECTOR_UNITS: usize = 1024;
+
 pub fn parse_complex_selector(
     stream: &mut TokenStream,
 ) -> Result<ComplexSelector, SelectorParseError> {
@@ -77,6 +85,12 @@ pub fn parse_complex_selector(
     });
 
     loop {
+        // F-4：单元数封顶（每个循环迭代至多追加一个单元）。
+        if units.len() >= MAX_COMPLEX_SELECTOR_UNITS {
+            return Err(SelectorParseError::InvalidSelector(format!(
+                "complex selector exceeds {MAX_COMPLEX_SELECTOR_UNITS} compound units"
+            )));
+        }
         // Detect leading whitespace (potential implicit descendant
         // combinator). §3 L4724-4727: whitespace between two
         // complex-selector-units is required if no explicit combinator
