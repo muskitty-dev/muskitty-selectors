@@ -1,0 +1,157 @@
+{
+ "source": "parse-has.html",
+ "cases": [
+  {
+   "kind": "valid",
+   "input": ":has(a)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ":has(#a)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ":has(.a)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ":has([a])",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ":has([a=\"b\"])",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ":has([a|=\"b\"])",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ":has(:hover)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "*:has(.a)",
+   "serializations": [
+    "*:has(.a)",
+    ":has(.a)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ".a:has(.b)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ".a:has(> .b)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ".a:has(~ .b)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ".a:has(+ .b)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ".a:has(.b) .c",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ".a .b:has(.c)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ".a .b:has(.c .d)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ".a .b:has(.c .d) .e",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ".a:has(.b:is(.c .d))",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ".a:is(.b:has(.c) .d)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ".a:not(:has(.b))",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ".a:has(:not(.b))",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ".a:has(.b):has(.c)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "*|*:has(*)",
+   "serializations": [
+    ":has(*)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":has(*|*)",
+   "serializations": [
+    ":has(*)"
+   ]
+  },
+  {
+   "kind": "invalid",
+   "input": ":has",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ".a:has",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ".a:has b",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":has()",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":has(123)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":has(.a, 123)",
+   "serializations": []
+  }
+ ]
+}

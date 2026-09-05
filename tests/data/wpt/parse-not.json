@@ -1,0 +1,146 @@
+{
+ "source": "parse-not.html",
+ "cases": [
+  {
+   "kind": "valid",
+   "input": "button:not([disabled])",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "*:not(foo)",
+   "serializations": [
+    "*:not(foo)",
+    ":not(foo)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":not(:link):not(:visited)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "*|*:not(*)",
+   "serializations": [
+    ":not(*)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":not(:hover)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ":not(*|*)",
+   "serializations": [
+    ":not(*)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": "foo:not(bar)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ":not(:not(foo))",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ":not(.a .b)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ":not(.a + .b)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ":not(.a .b ~ c)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ":not(span.a, div.b)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ":not(.a .b ~ c, .d .e)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ":not(:host)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ":not(:host(.a))",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ":host(:not(.a))",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ":not(:host(:not(.a)))",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ":not([disabled][selected])",
+   "serializations": [
+    ":not([disabled][selected])"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":not([disabled],[selected])",
+   "serializations": [
+    ":not([disabled], [selected])"
+   ]
+  },
+  {
+   "kind": "invalid",
+   "input": ":not()",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":not(:not())",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":not(::before)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":not(:unknownpseudo)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":not(.a, :unknownpseudo)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":not(:unknownpseudo, .a)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":host(:not(.a .b))",
+   "serializations": []
+  }
+ ]
+}

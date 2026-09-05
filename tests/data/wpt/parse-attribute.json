@@ -1,0 +1,105 @@
+{
+ "source": "parse-attribute.html",
+ "cases": [
+  {
+   "kind": "valid",
+   "input": "[att]",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "[att=val]",
+   "serializations": [
+    "[att=\"val\"]"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": "[att~=val]",
+   "serializations": [
+    "[att~=\"val\"]"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": "[att|=val]",
+   "serializations": [
+    "[att|=\"val\"]"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": "h1[title]",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "span[class='example']",
+   "serializations": [
+    "span[class=\"example\"]"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": "a[hreflang=fr]",
+   "serializations": [
+    "a[hreflang=\"fr\"]"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": "a[hreflang|='en']",
+   "serializations": [
+    "a[hreflang|=\"en\"]"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": "[att^=val]",
+   "serializations": [
+    "[att^=\"val\"]"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": "[att$=val]",
+   "serializations": [
+    "[att$=\"val\"]"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": "[att*=val]",
+   "serializations": [
+    "[att*=\"val\"]"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": "object[type^=\"image/\"]",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "a[href$=\".html\"]",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "p[title*=\"hello\"]",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "[*|att]",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "[|att]",
+   "serializations": [
+    "[att]"
+   ]
+  }
+ ]
+}

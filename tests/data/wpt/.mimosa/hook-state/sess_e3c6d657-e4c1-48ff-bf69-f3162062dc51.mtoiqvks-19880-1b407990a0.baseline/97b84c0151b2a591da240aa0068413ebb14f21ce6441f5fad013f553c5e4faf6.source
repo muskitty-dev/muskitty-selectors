@@ -1,0 +1,160 @@
+#!/usr/bin/env python3
+"""Extract WPT css/selectors/parsing cases from parse-*.html into JSON.
+Kinds: valid / forgiving (valid only forgivingly) / invalid. Serializations
+recorded for reference; the Rust harness asserts validity only."""
+import json
+import os
+import re
+import sys
+
+SRC = os.path.realpath(sys.argv[1])
+OUT = os.path.realpath(sys.argv[2])
+# Path safety: both roots must be real directories, and every written file
+# name is a basename derived from os.listdir output (never user-supplied).
+assert os.path.isdir(SRC), SRC
+assert os.path.isdir(OUT), OUT
+
+
+def read_string(js, i):
+    quote = js[i]
+    i += 1
+    buf = []
+    n = len(js)
+    while i < n:
+        c = js[i]
+        if c == "\\" and i + 1 < n:
+            nxt = js[i + 1]
+            mapping = {"n": "\n", "t": "\t", "r": "\r", "0": "\0", "b": "\b",
+                       "f": "\f", "v": "\v", "\\": "\\", "'": "'", '"': '"',
+                       "`": "`", "/": "/"}
+            if nxt == "u" and i + 5 < n:
+                buf.append(chr(int(js[i + 2:i + 6], 16)))
+                i += 6
+                continue
+            if nxt == "x" and i + 3 < n:
+                buf.append(chr(int(js[i + 2:i + 4], 16)))
+                i += 4
+                continue
+            buf.append(mapping.get(nxt, nxt))
+            i += 2
+            continue
+        if c == quote:
+            return "".join(buf), i + 1
+        if c == "\n":
+            return None, i
+        buf.append(c)
+        i += 1
+    return None, i
+
+
+def parse_args(js, start):
+    args = []
+    i = start
+    n = len(js)
+    depth = 0
+    saw = False
+    while i < n:
+        c = js[i]
+        if c == ")":
+            break
+        if c == "[":
+            depth += 1
+            i += 1
+            continue
+        if c == "]":
+            depth -= 1
+            i += 1
+            continue
+        if c == "," and depth == 0:
+            i += 1
+            continue
+        if c in ("'", '"'):
+            s, i2 = read_string(js, i)
+            if s is None:
+                return None
+            args.append(s)
+            i = i2
+            saw = True
+            continue
+        i += 1
+    return args if saw else None
+
+
+def extract_calls(js):
+    out = []
+    for m in re.finditer(
+            r"test_(valid_selector|invalid_selector|valid_forgiving_selector)\s*\(",
+            js):
+        args = parse_args(js, m.end())
+        if not args:
+            continue
+        name = m.group(1)
+        if name == "invalid_selector":
+            out.append({"kind": "invalid", "input": args[0],
+                        "serializations": []})
+        else:
+            kind = "valid" if name == "valid_selector" else "forgiving"
+            out.append({"kind": kind, "input": args[0],
+                        "serializations": args[1:]})
+    return out
+
+
+def script_body(path):
+    html = open(path, encoding="utf-8").read()
+    blocks = re.findall(r"<script>(.*?)</script>", html, re.S)
+    return blocks[-1] if blocks else ""
+
+
+ANB_FORMS = [
+    ("(1n+0)", "(n)"), ("(n+0)", "(n)"), ("(n)", "(n)"), ("(-n+0)", "(-n)"),
+    ("(-n)", "(-n)"), ("(N)", "(n)"), ("(+n+3)", "(n+3)"),
+    ("( +n + 7 )", "(n+7)"), ("(  N- 123)", "(n-123)"), ("(n- 10)", "(n-10)"),
+    ("(-n\n- 1)", "(-n-1)"), ("( 23n\n\n+\n\n123 )", "(23n+123)"),
+    ("(n- 1 2)", None), ("(n-b1)", None), ("(n-+1)", None), ("(n-1n)", None),
+    ("(-n -b1)", None), ("(-1n- b1)", None), ("(-n-13b1)", None),
+    ("(-n-+1)", None), ("(-n+n)", None), ("(+ 1n)", None),
+    ("(  n +12 3)", None), ("(  12 n )", None), ("(+12n-0+1)", None),
+    ("(+12N -- 1)", None), ("(+12 N )", None), ("(+ n + 7)", None),
+]
+
+files = sorted(f for f in os.listdir(SRC) if f.endswith(".html") and
+               (f.startswith("parse-") or f == "invalid-pseudos.html"))
+total = 0
+for fname in files:
+    js = script_body(os.path.join(SRC, fname))
+    cases = []
+    if fname == "parse-anplusb.html":
+        for pseudo in (":nth-child", ":nth-last-child", ":nth-of-type",
+                       ":nth-last-of-type"):
+            for suffix, ser in ANB_FORMS:
+                cases.append({"kind": "invalid" if ser is None else "valid",
+                              "input": pseudo + suffix,
+                              "serializations": [pseudo + ser] if ser else []})
+    elif fname == "parse-is-where.html":
+        for m in re.finditer(r"assert_valid\(\s*(true|false)\s*,", js):
+            valid = m.group(1) == "true"
+            args = parse_args(js, m.end())
+            if not args or len(args) < 2:
+                continue
+            pattern, expected = args[0], args[1]
+            for pseudo in (":is", ":where"):
+                sers = [expected.replace("{}", pseudo)] if expected else []
+                cases.append({"kind": "valid" if valid else "forgiving",
+                              "input": pattern.replace("{}", pseudo),
+                              "serializations": sers})
+        cases += extract_calls(js)
+    else:
+        cases = extract_calls(js)
+    out_name = fname.replace(".html", ".json")
+    assert "/" not in out_name and "\\" not in out_name
+    with open(os.path.join(OUT, out_name), "w", encoding="utf-8",
+              newline="\n") as f:
+        json.dump({"source": fname, "cases": cases}, f, indent=1,
+                  ensure_ascii=False)
+        f.write("\n")
+    nv = sum(1 for c in cases if c["kind"] == "valid")
+    ni = sum(1 for c in cases if c["kind"] == "invalid")
+    nf = sum(1 for c in cases if c["kind"] == "forgiving")
+    total += len(cases)
+    print(f"{fname}: {len(cases)} (valid={nv} invalid={ni} forgiving={nf})")
+print(f"TOTAL {total}")

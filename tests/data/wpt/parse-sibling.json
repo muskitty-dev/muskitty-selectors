@@ -1,0 +1,20 @@
+{
+ "source": "parse-sibling.html",
+ "cases": [
+  {
+   "kind": "valid",
+   "input": "math + p",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "h1.opener + h2",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "h1 ~ pre",
+   "serializations": []
+  }
+ ]
+}

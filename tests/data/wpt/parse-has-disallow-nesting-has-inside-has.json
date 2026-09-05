@@ -1,0 +1,10 @@
+{
+ "source": "parse-has-disallow-nesting-has-inside-has.html",
+ "cases": [
+  {
+   "kind": "invalid",
+   "input": ".a:has(.b:has(.c))",
+   "serializations": []
+  }
+ ]
+}

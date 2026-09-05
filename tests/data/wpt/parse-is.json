@@ -1,0 +1,39 @@
+{
+ "source": "parse-is.html",
+ "cases": [
+  {
+   "kind": "valid",
+   "input": ":is(ul,ol,.list) > [hidden]",
+   "serializations": [
+    ":is(ul, ol, .list) > [hidden]"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":is(:hover,:focus)",
+   "serializations": [
+    ":is(:hover, :focus)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": "a:is(:not(:hover))",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ":is(#a)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ".a.b ~ :is(.c.d ~ .e.f)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ".a.b ~ .c.d:is(span.e + .f, .g.h > .i.j .k)",
+   "serializations": []
+  }
+ ]
+}

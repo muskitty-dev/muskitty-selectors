@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "mimosa-hook-status/v1",
+  "recordedAt": "2026-09-05T15:11:01.938Z",
+  "sessionId": "sess_e3c6d657-e4c1-48ff-bf69-f3162062dc51",
+  "event": "PostToolUse",
+  "toolName": "Write",
+  "file": "D:\\Muskitty\\crates\\muskitty-selectors\\tests\\wpt_parsing.rs",
+  "outcome": "inconclusive",
+  "coverage": "partial",
+  "findingCount": 0,
+  "durationMs": 18,
+  "hostState": "hook_complete",
+  "reportHint": ".mimosa/reports/"
+}

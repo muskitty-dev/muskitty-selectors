@@ -22,6 +22,7 @@ muskitty-dom = { path = "../muskitty-dom", version = "0.2.0", optional = true }
 
 [dev-dependencies]
 muskitty-dom = { path = "../muskitty-dom" }
+serde_json = "1.0.151"
 
 # 防止被父 workspace (D:\Muskitty\Cargo.toml) 误吸入。
 # selectors 作为独立 git 仓库剥离，有自己的 workspace 根。

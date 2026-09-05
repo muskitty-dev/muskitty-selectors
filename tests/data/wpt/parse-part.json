@@ -1,0 +1,165 @@
+{
+ "source": "parse-part.html",
+ "cases": [
+  {
+   "kind": "valid",
+   "input": "::part(--foo)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "::part(bar)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "::part(--)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "::part(--0)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "::part(foo bar)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "::part(-foo bar)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "::part(foo):focus",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "::part(foo):hover",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "::part(foo):focus-within",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "::part(foo)::before",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "::part(foo)::after",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "::part(foo)::placeholder",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "::part(foo)::first-line",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "::part(foo)::first-letter",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "::part(foo)::file-selector-button",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "::part(foo):is(:focus)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ":lang(en)::part(foo)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ":dir(ltr)::part(foo)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "::part(foo):lang(en)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "::part(foo):dir(ltr)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "::part(foo):disabled",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "::part(foo):checked",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":part()",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":part(0)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":part('foo')",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":part([foo])",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": "::part(foo) + ::part(bar)",
+   "serializations": []
+  },
+  {
+   "kind": "forgiving",
+   "input": "::part(foo):is(ul)",
+   "serializations": []
+  },
+  {
+   "kind": "forgiving",
+   "input": "::part(foo):is(nav ul)",
+   "serializations": []
+  },
+  {
+   "kind": "forgiving",
+   "input": "::part(foo):where(ul)",
+   "serializations": []
+  },
+  {
+   "kind": "forgiving",
+   "input": "::part(foo):where(nav ul)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": "::part(foo):has(li)",
+   "serializations": []
+  }
+ ]
+}

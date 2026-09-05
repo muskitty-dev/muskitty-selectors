@@ -1,0 +1,318 @@
+{
+ "source": "parse-is-where.html",
+ "cases": [
+  {
+   "kind": "valid",
+   "input": ":is(div )",
+   "serializations": [
+    ":is(div)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":where(div )",
+   "serializations": [
+    ":where(div)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":is(div + bar, div ~ .baz)",
+   "serializations": [
+    "Multiple selectors with combinators"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":where(div + bar, div ~ .baz)",
+   "serializations": [
+    "Multiple selectors with combinators"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":is(:is(div))",
+   "serializations": [
+    "Nested :is"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":where(:is(div))",
+   "serializations": [
+    "Nested :is"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":is(:where(div))",
+   "serializations": [
+    "Nested :where"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":where(:where(div))",
+   "serializations": [
+    "Nested :where"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":host(:is(div))",
+   "serializations": [
+    "Nested inside :host, without combinators"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":host(:where(div))",
+   "serializations": [
+    "Nested inside :host, without combinators"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":host(:is(div ))",
+   "serializations": [
+    ":host(:is(div))"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":host(:where(div ))",
+   "serializations": [
+    ":host(:where(div))"
+   ]
+  },
+  {
+   "kind": "forgiving",
+   "input": ":host(:is(div .foo))",
+   "serializations": [
+    "Nested inside :host, with combinators"
+   ]
+  },
+  {
+   "kind": "forgiving",
+   "input": ":host(:where(div .foo))",
+   "serializations": [
+    "Nested inside :host, with combinators"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":is(:hover, :active)",
+   "serializations": [
+    "Pseudo-classes inside"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":where(:hover, :active)",
+   "serializations": [
+    "Pseudo-classes inside"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":is(div):hover",
+   "serializations": [
+    "Pseudo-classes after"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":where(div):hover",
+   "serializations": [
+    "Pseudo-classes after"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":is(div)::before",
+   "serializations": [
+    "Pseudo-elements after"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":where(div)::before",
+   "serializations": [
+    "Pseudo-elements after"
+   ]
+  },
+  {
+   "kind": "forgiving",
+   "input": ":is(::before)",
+   "serializations": [
+    "Pseudo-elements inside"
+   ]
+  },
+  {
+   "kind": "forgiving",
+   "input": ":where(::before)",
+   "serializations": [
+    "Pseudo-elements inside"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":is(div) + bar",
+   "serializations": [
+    "Combinators after"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":where(div) + bar",
+   "serializations": [
+    "Combinators after"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": "::part(foo):is(:hover)",
+   "serializations": [
+    "After part with simple pseudo-class"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": "::part(foo):where(:hover)",
+   "serializations": [
+    "After part with simple pseudo-class"
+   ]
+  },
+  {
+   "kind": "forgiving",
+   "input": "::part(foo):is([attr='value'])",
+   "serializations": [
+    "After part with invalid selector after"
+   ]
+  },
+  {
+   "kind": "forgiving",
+   "input": "::part(foo):where([attr='value'])",
+   "serializations": [
+    "After part with invalid selector after"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":not(:is(div))",
+   "serializations": [
+    "Nested inside :not, without combinators"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":not(:where(div))",
+   "serializations": [
+    "Nested inside :not, without combinators"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":not(:is(div .foo))",
+   "serializations": [
+    "Nested inside :not, with combinators"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":not(:where(div .foo))",
+   "serializations": [
+    "Nested inside :not, with combinators"
+   ]
+  },
+  {
+   "kind": "forgiving",
+   "input": ":is(,,,)",
+   "serializations": [
+    ":is(, , , )"
+   ]
+  },
+  {
+   "kind": "forgiving",
+   "input": ":where(,,,)",
+   "serializations": [
+    ":where(, , , )"
+   ]
+  },
+  {
+   "kind": "forgiving",
+   "input": ":host(:is(,,,))",
+   "serializations": [
+    ":host(:is(, , , ))"
+   ]
+  },
+  {
+   "kind": "forgiving",
+   "input": ":host(:where(,,,))",
+   "serializations": [
+    ":host(:where(, , , ))"
+   ]
+  },
+  {
+   "kind": "forgiving",
+   "input": ":host(:is(.a, .b+.c, .d))",
+   "serializations": [
+    "Nested inside :host, serialize invalid selector as-is"
+   ]
+  },
+  {
+   "kind": "forgiving",
+   "input": ":host(:where(.a, .b+.c, .d))",
+   "serializations": [
+    "Nested inside :host, serialize invalid selector as-is"
+   ]
+  },
+  {
+   "kind": "forgiving",
+   "input": ":is(::before:HOVER, .a)",
+   "serializations": [
+    "Pseudo-element inside, serialize invalid selector as-is"
+   ]
+  },
+  {
+   "kind": "forgiving",
+   "input": ":where(::before:HOVER, .a)",
+   "serializations": [
+    "Pseudo-element inside, serialize invalid selector as-is"
+   ]
+  },
+  {
+   "kind": "forgiving",
+   "input": ":has(:is(:has(.a+.b)))",
+   "serializations": [
+    "Nested has, serialize invalid selector as-is"
+   ]
+  },
+  {
+   "kind": "forgiving",
+   "input": ":has(:where(:has(.a+.b)))",
+   "serializations": [
+    "Nested has, serialize invalid selector as-is"
+   ]
+  },
+  {
+   "kind": "forgiving",
+   "input": ":is(::before:HOVER  )",
+   "serializations": [
+    ":is(::before:HOVER)"
+   ]
+  },
+  {
+   "kind": "forgiving",
+   "input": ":where(::before:HOVER  )",
+   "serializations": [
+    ":where(::before:HOVER)"
+   ]
+  },
+  {
+   "kind": "invalid",
+   "input": ":is(# C4єанйтж╕/┘ГЁжЮХєа▓┐ЁЭБМєаСеЁЭЖА%=[ямм0)",
+   "serializations": []
+  }
+ ]
+}

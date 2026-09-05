@@ -1,0 +1,26 @@
+{
+ "source": "parse-universal.html",
+ "cases": [
+  {
+   "kind": "valid",
+   "input": "*",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "div :first-child",
+   "serializations": [
+    "div *:first-child",
+    "div :first-child"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": "div *:first-child",
+   "serializations": [
+    "div *:first-child",
+    "div :first-child"
+   ]
+  }
+ ]
+}

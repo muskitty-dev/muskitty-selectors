@@ -1,0 +1,65 @@
+{
+ "source": "invalid-pseudos.html",
+ "cases": [
+  {
+   "kind": "invalid",
+   "input": ":-internal-animating-full-screen-transition",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":-internal-fullscreen-document",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":-internal-html-document",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":-internal-media-document",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":-khtml-drag",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":-webkit-animating-full-screen-transition",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":-webkit-full-page-media",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":-webkit-full-screen-ancestor",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":-webkit-full-screen-controls-hidden",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":-webkit-full-screen-document",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": "::-apple-attachment-controls-container",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": "::-internal-loading-auto-fill-button",
+   "serializations": []
+  }
+ ]
+}

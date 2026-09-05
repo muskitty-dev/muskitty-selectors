@@ -1,0 +1,100 @@
+{
+ "source": "parse-slotted.html",
+ "cases": [
+  {
+   "kind": "valid",
+   "input": "::slotted(bar)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "::slotted([attr=\"foo\"])",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "::slotted(*)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "::slotted(.class)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "::slotted(:not(foo))",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "::slotted(:not(:nth-last-of-type(2)):not([slot=\"foo\"]))",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "::slotted(:first-child)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "::slotted(:hover)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "::slotted(:has(:first-child:last-child))",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": "::slotted",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": "::slotted()",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": "::slotted(0)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":slotted(foo)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": "::slotted(foo):first-child",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": "::slotted(foo):hover",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": "::slotted(foo):focus",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": "::slotted(foo):lang(en)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": "::slotted(foo):dir(ltr)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": "::slotted(foo) + ::slotted(bar)",
+   "serializations": []
+  }
+ ]
+}

@@ -1,0 +1,145 @@
+{
+ "source": "parse-heading.html",
+ "cases": [
+  {
+   "kind": "valid",
+   "input": ":heading",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ":heading(2)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ":heading(99999)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ":heading(0)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ":heading(0, 1, 2)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ":heading(0, 1, 2, 3, 4, 5, 6, 7, 8, 9)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ":heading(-1)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "h1:heading",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "h1:heading(1)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "h1:heading(2)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":heading()",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":heading(1.0)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":heading(1.4)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":heading(n)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":heading(odd)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":heading(even)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":heading(2n)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":heading(2n+1)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":heading(2n+2)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":heading(-n+3)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":heading(2n, 3n)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":heading(2, 3n)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":heading(2 of .foo)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":heading(2n of .foo)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":heading(calc(1))",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":heading(max(1, 2))",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":heading(min(1, 2)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":heading(var(--level))",
+   "serializations": []
+  }
+ ]
+}

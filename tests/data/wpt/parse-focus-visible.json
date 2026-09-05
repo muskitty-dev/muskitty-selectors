@@ -1,0 +1,20 @@
+{
+ "source": "parse-focus-visible.html",
+ "cases": [
+  {
+   "kind": "valid",
+   "input": ":focus-visible",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "a:focus-visible",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ":focus:not(:focus-visible)",
+   "serializations": []
+  }
+ ]
+}

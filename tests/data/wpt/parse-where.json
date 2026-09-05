@@ -1,0 +1,39 @@
+{
+ "source": "parse-where.html",
+ "cases": [
+  {
+   "kind": "valid",
+   "input": ":where(ul,ol,.list) > [hidden]",
+   "serializations": [
+    ":where(ul, ol, .list) > [hidden]"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":where(:hover,:focus)",
+   "serializations": [
+    ":where(:hover, :focus)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": "a:where(:not(:hover))",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ":where(#a)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ".a.b ~ :where(.c.d ~ .e.f)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ".a.b ~ .c.d:where(span.e + .f, .g.h > .i.j .k)",
+   "serializations": []
+  }
+ ]
+}

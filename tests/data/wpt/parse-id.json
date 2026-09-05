@@ -1,0 +1,23 @@
+{
+ "source": "parse-id.html",
+ "cases": [
+  {
+   "kind": "valid",
+   "input": "h1#chapter1",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "#chapter1",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "*#z98y",
+   "serializations": [
+    "*#z98y",
+    "#z98y"
+   ]
+  }
+ ]
+}

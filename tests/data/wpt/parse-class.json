@@ -1,0 +1,31 @@
+{
+ "source": "parse-class.html",
+ "cases": [
+  {
+   "kind": "valid",
+   "input": "*.pastoral",
+   "serializations": [
+    "*.pastoral",
+    ".pastoral"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ".pastoral",
+   "serializations": [
+    "*.pastoral",
+    ".pastoral"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": "h1.pastoral",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "p.pastoral.marine",
+   "serializations": []
+  }
+ ]
+}

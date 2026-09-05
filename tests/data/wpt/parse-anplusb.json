@@ -1,0 +1,661 @@
+{
+ "source": "parse-anplusb.html",
+ "cases": [
+  {
+   "kind": "valid",
+   "input": ":nth-child(1n+0)",
+   "serializations": [
+    ":nth-child(n)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-child(n+0)",
+   "serializations": [
+    ":nth-child(n)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-child(n)",
+   "serializations": [
+    ":nth-child(n)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-child(-n+0)",
+   "serializations": [
+    ":nth-child(-n)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-child(-n)",
+   "serializations": [
+    ":nth-child(-n)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-child(N)",
+   "serializations": [
+    ":nth-child(n)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-child(+n+3)",
+   "serializations": [
+    ":nth-child(n+3)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-child( +n + 7 )",
+   "serializations": [
+    ":nth-child(n+7)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-child(  N- 123)",
+   "serializations": [
+    ":nth-child(n-123)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-child(n- 10)",
+   "serializations": [
+    ":nth-child(n-10)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-child(-n\n- 1)",
+   "serializations": [
+    ":nth-child(-n-1)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-child( 23n\n\n+\n\n123 )",
+   "serializations": [
+    ":nth-child(23n+123)"
+   ]
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-child(n- 1 2)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-child(n-b1)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-child(n-+1)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-child(n-1n)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-child(-n -b1)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-child(-1n- b1)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-child(-n-13b1)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-child(-n-+1)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-child(-n+n)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-child(+ 1n)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-child(  n +12 3)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-child(  12 n )",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-child(+12n-0+1)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-child(+12N -- 1)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-child(+12 N )",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-child(+ n + 7)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-last-child(1n+0)",
+   "serializations": [
+    ":nth-last-child(n)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-last-child(n+0)",
+   "serializations": [
+    ":nth-last-child(n)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-last-child(n)",
+   "serializations": [
+    ":nth-last-child(n)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-last-child(-n+0)",
+   "serializations": [
+    ":nth-last-child(-n)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-last-child(-n)",
+   "serializations": [
+    ":nth-last-child(-n)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-last-child(N)",
+   "serializations": [
+    ":nth-last-child(n)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-last-child(+n+3)",
+   "serializations": [
+    ":nth-last-child(n+3)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-last-child( +n + 7 )",
+   "serializations": [
+    ":nth-last-child(n+7)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-last-child(  N- 123)",
+   "serializations": [
+    ":nth-last-child(n-123)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-last-child(n- 10)",
+   "serializations": [
+    ":nth-last-child(n-10)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-last-child(-n\n- 1)",
+   "serializations": [
+    ":nth-last-child(-n-1)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-last-child( 23n\n\n+\n\n123 )",
+   "serializations": [
+    ":nth-last-child(23n+123)"
+   ]
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-last-child(n- 1 2)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-last-child(n-b1)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-last-child(n-+1)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-last-child(n-1n)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-last-child(-n -b1)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-last-child(-1n- b1)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-last-child(-n-13b1)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-last-child(-n-+1)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-last-child(-n+n)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-last-child(+ 1n)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-last-child(  n +12 3)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-last-child(  12 n )",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-last-child(+12n-0+1)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-last-child(+12N -- 1)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-last-child(+12 N )",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-last-child(+ n + 7)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-of-type(1n+0)",
+   "serializations": [
+    ":nth-of-type(n)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-of-type(n+0)",
+   "serializations": [
+    ":nth-of-type(n)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-of-type(n)",
+   "serializations": [
+    ":nth-of-type(n)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-of-type(-n+0)",
+   "serializations": [
+    ":nth-of-type(-n)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-of-type(-n)",
+   "serializations": [
+    ":nth-of-type(-n)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-of-type(N)",
+   "serializations": [
+    ":nth-of-type(n)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-of-type(+n+3)",
+   "serializations": [
+    ":nth-of-type(n+3)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-of-type( +n + 7 )",
+   "serializations": [
+    ":nth-of-type(n+7)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-of-type(  N- 123)",
+   "serializations": [
+    ":nth-of-type(n-123)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-of-type(n- 10)",
+   "serializations": [
+    ":nth-of-type(n-10)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-of-type(-n\n- 1)",
+   "serializations": [
+    ":nth-of-type(-n-1)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-of-type( 23n\n\n+\n\n123 )",
+   "serializations": [
+    ":nth-of-type(23n+123)"
+   ]
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-of-type(n- 1 2)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-of-type(n-b1)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-of-type(n-+1)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-of-type(n-1n)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-of-type(-n -b1)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-of-type(-1n- b1)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-of-type(-n-13b1)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-of-type(-n-+1)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-of-type(-n+n)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-of-type(+ 1n)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-of-type(  n +12 3)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-of-type(  12 n )",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-of-type(+12n-0+1)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-of-type(+12N -- 1)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-of-type(+12 N )",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-of-type(+ n + 7)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-last-of-type(1n+0)",
+   "serializations": [
+    ":nth-last-of-type(n)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-last-of-type(n+0)",
+   "serializations": [
+    ":nth-last-of-type(n)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-last-of-type(n)",
+   "serializations": [
+    ":nth-last-of-type(n)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-last-of-type(-n+0)",
+   "serializations": [
+    ":nth-last-of-type(-n)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-last-of-type(-n)",
+   "serializations": [
+    ":nth-last-of-type(-n)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-last-of-type(N)",
+   "serializations": [
+    ":nth-last-of-type(n)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-last-of-type(+n+3)",
+   "serializations": [
+    ":nth-last-of-type(n+3)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-last-of-type( +n + 7 )",
+   "serializations": [
+    ":nth-last-of-type(n+7)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-last-of-type(  N- 123)",
+   "serializations": [
+    ":nth-last-of-type(n-123)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-last-of-type(n- 10)",
+   "serializations": [
+    ":nth-last-of-type(n-10)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-last-of-type(-n\n- 1)",
+   "serializations": [
+    ":nth-last-of-type(-n-1)"
+   ]
+  },
+  {
+   "kind": "valid",
+   "input": ":nth-last-of-type( 23n\n\n+\n\n123 )",
+   "serializations": [
+    ":nth-last-of-type(23n+123)"
+   ]
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-last-of-type(n- 1 2)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-last-of-type(n-b1)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-last-of-type(n-+1)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-last-of-type(n-1n)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-last-of-type(-n -b1)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-last-of-type(-1n- b1)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-last-of-type(-n-13b1)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-last-of-type(-n-+1)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-last-of-type(-n+n)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-last-of-type(+ 1n)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-last-of-type(  n +12 3)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-last-of-type(  12 n )",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-last-of-type(+12n-0+1)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-last-of-type(+12N -- 1)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-last-of-type(+12 N )",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":nth-last-of-type(+ n + 7)",
+   "serializations": []
+  }
+ ]
+}

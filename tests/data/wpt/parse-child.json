@@ -1,0 +1,17 @@
+{
+ "source": "parse-child.html",
+ "cases": [
+  {
+   "kind": "valid",
+   "input": "body > p",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "div ol>li p",
+   "serializations": [
+    "div ol > li p"
+   ]
+  }
+ ]
+}

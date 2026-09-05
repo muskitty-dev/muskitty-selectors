@@ -1,0 +1,125 @@
+{
+ "source": "parse-state.html",
+ "cases": [
+  {
+   "kind": "valid",
+   "input": ":state(--foo)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ":state(bar)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ":state(--)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ":state(--0)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": ":host(:state(--foo))",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "my-input[type=\"foo\"]:state(checked)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "my-input[type=\"foo\"]:state(--0)::before",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "my-input[type=\"foo\"]:state(--0)::part(inner)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "my-input[type=\"foo\"]:state(--0)::part(inner):state(bar)",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "::part(inner):state(bar)::before",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "::part(inner):state(bar)::after",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":state",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":state(",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":state()",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":state(0)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":state(0rem)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":state(url())",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":state(foo(1))",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": ":state(:host)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": "my-input::after:state(foo)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": "::part(inner):state(bar)::before:state(foo)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": "::part(inner):state(bar)::after:state(foo)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": "my-input::first-letter:state(foo)",
+   "serializations": []
+  },
+  {
+   "kind": "invalid",
+   "input": "::slotted(foo):state(foo)",
+   "serializations": []
+  }
+ ]
+}

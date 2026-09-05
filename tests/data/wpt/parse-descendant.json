@@ -1,0 +1,23 @@
+{
+ "source": "parse-descendant.html",
+ "cases": [
+  {
+   "kind": "valid",
+   "input": "h1 em",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "div * p",
+   "serializations": []
+  },
+  {
+   "kind": "valid",
+   "input": "div p *[href]",
+   "serializations": [
+    "div p *[href]",
+    "div p [href]"
+   ]
+  }
+ ]
+}
