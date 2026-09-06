@@ -388,3 +388,158 @@ fn three_part_descendant_matches() {
     assert!(matches(&list, &c));
     assert!(!matches(&list, &b));
 }
+
+// ---------------------------------------------------------------------------
+// SEL-1: 左向匹配回溯的记忆化与步数预算（审计 2026-09-06 P0）
+// ---------------------------------------------------------------------------
+
+/// 构造 `depth` 层全 `.x` 的 div 链，返回**最深**元素（其 parent
+/// 快照逐层内嵌完整祖先链）。自顶向下构建：每轮把当前链顶作为新
+/// child 的 parent 快照。
+fn deep_chain_leaf(depth: usize, class: &str) -> StubElement {
+    let mk = || {
+        let mut e = StubElement::new("div");
+        e.classes = vec![class.into()];
+        e
+    };
+    let mut node = mk(); // 根
+    for _ in 1..depth {
+        let mut child = mk();
+        child.parent = Some(Box::new(node));
+        node = child;
+    }
+    node
+}
+
+/// 构造 `n` 个 `div` 兄弟（同一 parent），返回带完整
+/// previous_sibling 链的兄弟列表。
+fn build_div_siblings(n: usize) -> Vec<StubElement> {
+    let mut parent = StubElement::new("root");
+    let mut children: Vec<StubElement> = Vec::new();
+    for _ in 0..n {
+        let mut child = StubElement::new("div");
+        child.parent = Some(Box::new(parent.clone()));
+        if let Some(prev) = children.last() {
+            child.previous_sibling = Some(Box::new(prev.clone()));
+        }
+        children.push(child);
+    }
+    parent.children = children.clone();
+    for child in &mut children {
+        child.parent = Some(Box::new(parent.clone()));
+    }
+    children
+}
+
+/// 构造 `depth` 层链：leaf（最深层）与最顶 `x_ancestors` 层祖先为
+/// `.x`，中间层为无 class 的 div。返回最深元素。
+fn deep_chain_mixed(depth: usize, x_ancestors: usize) -> StubElement {
+    let x = || {
+        let mut e = StubElement::new("div");
+        e.classes = vec!["x".into()];
+        e
+    };
+    let mut node = x(); // 根（.x）
+    for level in 1..depth {
+        let mut child = if level < x_ancestors || level == depth - 1 {
+            x()
+        } else {
+            StubElement::new("div")
+        };
+        child.parent = Some(Box::new(node));
+        node = child;
+    }
+    node
+}
+
+/// SEL-1 ②：`.x` × 8（7 个 Descendant 组合器）对 60 深 DOM 的全路径
+/// 回溯在修复前为 C(59,7) ≈ 3×10⁸ 条候选路径（单条规则挂起数分钟）；
+/// 祖先链 + 记忆化后每 (祖先, 剩余后缀) 只求值一次（≤ 60×8 次），
+/// 即刻返回正确结果。
+#[test]
+fn descendant_backtracking_is_memoized() {
+    let leaf = deep_chain_leaf(60, "x");
+    let selector = ".x .x .x .x .x .x .x .x";
+    let list = parse_a_selector(selector).expect("parses");
+    assert!(
+        matches(&list, &leaf),
+        "60-level all-.x chain must match the 8-compound .x selector"
+    );
+    // 负例：只有 6 个 .x 祖先 < 需要的 7 个 —— 全路径探索同样被
+    // 记忆化压到 D×k，即刻返回不匹配。
+    let broken = deep_chain_mixed(60, 6);
+    let list_neg = parse_a_selector(selector).expect("parses");
+    assert!(
+        !matches(&list_neg, &broken),
+        "chain with only 6 .x ancestors must not match the 8-compound selector"
+    );
+}
+
+/// SEL-1 ①：兄弟组合器无记忆化，匹配**失败**时全路径探索 ——
+/// `span ~ div ~ div ~ div ~ div`（subject=div，最左 span 不存在）对
+/// 150 兄弟的路径计数为 C(149,4) ≈ 1.9×10⁷ > 100_000 步数预算 →
+/// 按不匹配降级并即刻返回（语义答案同为 false；回归信号是耗时：
+/// 预算被移除时本测试需 ~2×10⁷ 次 compound 匹配，数十秒级）。
+#[test]
+fn sibling_path_explosion_is_bounded_by_step_budget() {
+    let sibs = build_div_siblings(150);
+    let list = parse_a_selector("span ~ div ~ div ~ div ~ div").expect("parses");
+    assert!(
+        !matches(&list, &sibs[149]),
+        "C(149,4) ~= 1.9e7 path exploration must be bounded by MAX_MATCH_STEPS and return no-match"
+    );
+    // 浅兄弟树（预算内）语义不受影响：3 兄弟 × 1 组合器路径极少。
+    let small = build_div_siblings(3);
+    let list_small = parse_a_selector("div ~ div").expect("parses");
+    assert!(matches(&list_small, &small[2]));
+    assert!(!matches(&list_small, &small[0]));
+}
+
+/// SEL-1：跨"链外 → 链上"的组合器路径正确性 —— SubsequentSibling
+/// 走到祖先的兄弟（链外元素，层级 = 该祖先层级）后，其 Descendant
+/// 候选必须是**该兄弟自己的**祖先（= subject 祖先链后缀），验证
+/// 层级线索（level）在链外分支的传递。
+#[test]
+fn sibling_then_descendant_walks_siblings_own_ancestors() {
+    // root
+    // ├─ a.a
+    // └─ b.b
+    //    └─ c.c   ← subject
+    let mut root = StubElement::new("root");
+    let mut a = StubElement::new("div");
+    a.classes = vec!["a".into()];
+    let mut b = StubElement::new("div");
+    b.classes = vec!["b".into()];
+    let mut c = StubElement::new("span");
+    c.classes = vec!["c".into()];
+
+    a.parent = Some(Box::new(root.clone()));
+    b.parent = Some(Box::new(root.clone()));
+    b.previous_sibling = Some(Box::new(a.clone()));
+    a.next_sibling = Some(Box::new(b.clone()));
+    c.parent = Some(Box::new(b.clone()));
+    b.children = vec![c.clone()];
+    root.children = vec![a.clone(), b.clone()];
+
+    // `a ~ b .c`：c 的祖先 b，b 的先前兄弟 a。
+    let list = parse_a_selector(".a ~ .b .c").expect("parses");
+    assert!(matches(&list, &c));
+    // 兄弟不匹配 → 整体不匹配。
+    let list = parse_a_selector(".zz ~ .b .c").expect("parses");
+    assert!(!matches(&list, &c));
+    // b 的祖先链上无 .a（.a 是兄弟不是祖先）→ `a b .c` 的
+    // Descendant 版本不匹配。
+    let list = parse_a_selector(".a .b .c").expect("parses");
+    assert!(!matches(&list, &c));
+}
+
+/// SEL-1：subject 为根（无祖先）时的边界 —— Descendant/Child 无候选。
+#[test]
+fn root_subject_has_no_leftward_candidates() {
+    let mut root = StubElement::new("div");
+    root.classes = vec!["x".into()];
+    let list = parse_a_selector(".x .x").expect("parses");
+    assert!(!matches(&list, &root));
+    let list = parse_a_selector(".x > .x").expect("parses");
+    assert!(!matches(&list, &root));
+}
