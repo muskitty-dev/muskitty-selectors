@@ -40,8 +40,12 @@ use muskitty_css::tokenizer::Token;
 /// # Example
 ///
 /// `> .a` parses to `units = [{ .a, Some(Child) }, { :scope, None }]`.
+///
+/// `has_depth` 为当前 `:has()` 参数嵌套深度（SEL-2），向下游 complex
+/// 解析透传。
 pub fn parse_relative_selector(
     stream: &mut TokenStream,
+    has_depth: u8,
 ) -> Result<ComplexSelector, SelectorParseError> {
     stream.discard_whitespace();
 
@@ -68,7 +72,7 @@ pub fn parse_relative_selector(
     }
 
     // Parse the rest as a complex selector.
-    let mut complex = parse_complex_selector(stream)?;
+    let mut complex = parse_complex_selector(stream, has_depth)?;
 
     // Prepend the implicit :scope. The previously-leftmost unit
     // (last in `units`) gets the leading combinator (default Descendant).
@@ -98,12 +102,17 @@ pub fn parse_relative_selector(
 /// Comma-separated list of relative selectors. Non-forgiving: any
 /// invalid selector fails the whole list (per §3 L4811 note —
 /// `forgiving-selector-list` is reserved for `:is()` and `:where()`).
+///
+/// `has_depth` 为当前 `:has()` 参数嵌套深度（SEL-2）：`:has()` 参数
+/// 解析以 `has_depth + 1` 进入（见 simple.rs 的
+/// `parse_pseudo_class_argument`）。
 pub fn parse_relative_selector_list(
     stream: &mut TokenStream,
+    has_depth: u8,
 ) -> Result<SelectorList, SelectorParseError> {
     let mut selectors = Vec::new();
     stream.discard_whitespace();
-    selectors.push(parse_relative_selector(stream)?);
+    selectors.push(parse_relative_selector(stream, has_depth)?);
 
     loop {
         stream.discard_whitespace();
@@ -116,7 +125,7 @@ pub fn parse_relative_selector_list(
                         "trailing comma in relative selector list".into(),
                     ));
                 }
-                selectors.push(parse_relative_selector(stream)?);
+                selectors.push(parse_relative_selector(stream, has_depth)?);
             }
             _ => break,
         }

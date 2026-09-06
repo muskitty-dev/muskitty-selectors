@@ -501,6 +501,21 @@ const KNOWN_PSEUDO_CLASSES: &[&str] = &[
     "has",
 ];
 
+/// 带参数的伪类（§13.3 An+B 族 + §4 逻辑组合族）。这些伪类只接受
+/// 函数形式 `:name(...)`；裸 ident 形式（如 `:has`、`:nth-child`）
+/// 无效。WPT parse-has.html 将 `:has` / `.a:has` / `.a:has b` 全部
+/// 断言为 invalid。
+const PARAMETERISED_PSEUDO_CLASSES: &[&str] = &[
+    "nth-child",
+    "nth-last-child",
+    "nth-of-type",
+    "nth-last-of-type",
+    "is",
+    "where",
+    "not",
+    "has",
+];
+
 /// §14 L4476-4535: Pseudo-elements that accept the legacy single-colon
 /// form for backwards compatibility. When the parser encounters
 /// `:name` where `name` is in this list, it produces a
@@ -577,13 +592,23 @@ pub enum PseudoClassOrLegacy {
 /// - `Err(UnknownPseudoClass)` — `:` is followed by an ident-token
 ///   whose name is neither a known pseudo-class nor a legacy
 ///   pseudo-element.
+/// - `Err(InvalidSelector)` — a parameterised pseudo-class appears in
+///   its bare form without an argument list (e.g. `:has`), or `:has()`
+///   is nested within another `:has()` argument (审计 SEL-2).
 /// - `Err(UnclosedBlock)` — `:name(` is not closed with `)`.
 /// - `Err(InvalidAnPlusB)` — `:nth-child(...)` etc. has a malformed
 ///   An+B argument.
 /// - `Err(UnexpectedToken)` — `:` is followed by something other than
 ///   an ident-token or function-token.
+///
+/// 所有 `Err` 路径都先 `restore_mark` 回退到 `:` 之前，保证流位置
+/// 指向失败构造的起点（forgiving 恢复依赖这一点跳过整个构造）。
+///
+/// `has_depth` 是当前 `:has()` 参数的嵌套深度（0 = 不在任何 `:has()`
+/// 参数内），用于执行 selectors-4 §4.5 的 ":has() 不可嵌套" 规则。
 pub fn parse_pseudo_class_or_legacy(
     stream: &mut TokenStream,
+    has_depth: u8,
 ) -> Result<PseudoClassOrLegacy, SelectorParseError> {
     // Must start with `:`.
     if !matches!(stream.next_token(), Token::Colon) {
@@ -622,6 +647,16 @@ pub fn parse_pseudo_class_or_legacy(
                 stream.restore_mark();
                 return Err(SelectorParseError::UnknownPseudoClass(name));
             }
+            // Parameterised pseudo-classes require the function form
+            // `:name(...)`; the bare ident form (e.g. `:has`) is
+            // invalid per WPT parse-has.html (`:has` / `.a:has` /
+            // `.a:has b` are all test_invalid_selector).
+            if PARAMETERISED_PSEUDO_CLASSES.iter().any(|&p| p == lower) {
+                stream.restore_mark();
+                return Err(SelectorParseError::InvalidSelector(format!(
+                    "pseudo-class :{lower} requires an argument list"
+                )));
+            }
             PseudoClass {
                 name: lower,
                 argument: None,
@@ -643,7 +678,27 @@ pub fn parse_pseudo_class_or_legacy(
                 stream.restore_mark();
                 return Err(SelectorParseError::UnknownPseudoClass(name));
             }
-            let argument = parse_pseudo_class_argument(stream, &lower)?;
+            // SEL-2（selectors-4 §4.5）：`:has()` 不可嵌套 —— 已处于
+            // 某个 `:has()` 参数内（has_depth > 0）时再出现 `:has(` 即
+            // 无效。回退到 `:` 之前，让 forgiving 恢复能跳过整个构造：
+            // - `:is()`/`:where()`（forgiving）参数内 → 所在 complex
+            //   selector 解析失败被静默丢弃，整体仍合法；
+            // - `:not()` 参数或直接嵌套（非 forgiving）→ 整条选择器无效。
+            if lower == "has" && has_depth > 0 {
+                stream.restore_mark();
+                return Err(SelectorParseError::InvalidSelector(
+                    ":has() cannot be nested within :has()".into(),
+                ));
+            }
+            // 参数解析失败同样回退到 `:` 之前（流位置回到失败构造起点，
+            // mark 弹出），供上层 forgiving 恢复完整跳过该构造。
+            let argument = match parse_pseudo_class_argument(stream, &lower, has_depth) {
+                Ok(argument) => argument,
+                Err(e) => {
+                    stream.restore_mark();
+                    return Err(e);
+                }
+            };
             // Expect closing `)`.
             match stream.consume_token() {
                 Token::CloseParen => {}
@@ -697,13 +752,14 @@ pub fn parse_pseudo_class_or_legacy(
 fn parse_pseudo_class_argument(
     stream: &mut TokenStream,
     name: &str,
+    has_depth: u8,
 ) -> Result<PseudoClassArgument, SelectorParseError> {
     match name {
         "nth-child" | "nth-last-child" => {
             // §13.3 L3968 / §13.4 L4077: `An+B [of S]?`. Only nth-child and
             // nth-last-child accept the `of S` clause.
             let an_plus_b = parse_an_plus_b(stream)?;
-            let of_s = parse_optional_of_selector_list(stream)?;
+            let of_s = parse_optional_of_selector_list(stream, has_depth)?;
             Ok(PseudoClassArgument::AnPlusB(an_plus_b, of_s))
         }
         "nth-of-type" | "nth-last-of-type" => {
@@ -715,23 +771,27 @@ fn parse_pseudo_class_argument(
         }
         // §4.2 L1497-1499 + §4.4 L1617: forgiving-selector-list. Each
         // complex selector parsed independently; failures silently
-        // dropped (§3 L4765-4813).
+        // dropped (§3 L4765-4813). has_depth 原样透传：限制在 forgiving
+        // 参数内保持激活，嵌套 `:has(` 所在的失败 selector 被丢弃。
         "is" | "where" => {
-            let list = parse_forgiving_selector_list(stream)?;
+            let list = parse_forgiving_selector_list(stream, has_depth)?;
             Ok(PseudoClassArgument::SelectorList(list))
         }
         // §4.3 L1564-1607: complex-selector-list, non-forgiving.
         // Level 4 permits complex selectors as the argument.
+        // has_depth 原样透传：`:has(:not(:has(..)))` 的内层 `:has`
+        // 仍处于外层 `:has` 参数内，必须拒绝。
         "not" => {
-            let list = parse_selector_list(stream)?;
+            let list = parse_selector_list(stream, has_depth)?;
             Ok(PseudoClassArgument::SelectorList(list))
         }
         // §4.5 L1700: relative-selector-list, non-forgiving. Each
         // relative selector may begin with an optional combinator
         // (default descendant) and is anchored against an implicit
-        // :scope.
+        // :scope. 进入 `:has` 参数：has_depth + 1（顶层
+        // `:not(:has(..))` / `:is(:has(..))` 合法，其内从 1 起算）。
         "has" => {
-            let list = parse_relative_selector_list(stream)?;
+            let list = parse_relative_selector_list(stream, has_depth + 1)?;
             Ok(PseudoClassArgument::SelectorList(list))
         }
         _ => {
@@ -769,6 +829,7 @@ fn parse_pseudo_class_argument(
 /// convention as other pseudo-class argument parsers).
 fn parse_optional_of_selector_list(
     stream: &mut TokenStream,
+    has_depth: u8,
 ) -> Result<Option<SelectorList>, SelectorParseError> {
     stream.discard_whitespace();
     match stream.next_token() {
@@ -780,8 +841,9 @@ fn parse_optional_of_selector_list(
         Token::Ident(ref s) if s.eq_ignore_ascii_case("of") => {
             stream.discard_token();
             // §13.3 L3968: S is a <selector-list> (non-forgiving).
-            // Reuse parse_selector_list from list.rs.
-            let list = crate::parser::list::parse_selector_list(stream)?;
+            // Reuse parse_selector_list from list.rs. has_depth 原样
+            // 透传（`:has(:nth-child(2 of :has(..)))` 必须拒绝）。
+            let list = crate::parser::list::parse_selector_list(stream, has_depth)?;
             Ok(Some(list))
         }
         // Anything else after An+B is a structural error.

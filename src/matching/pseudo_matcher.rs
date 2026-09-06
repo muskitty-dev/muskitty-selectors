@@ -206,10 +206,16 @@ fn matches_relative_complex<E: Element>(cs: &crate::types::ComplexSelector, scop
         crate::types::Combinator::Child => scope.child_elements(),
         crate::types::Combinator::NextSibling => scope.next_sibling_element().into_iter().collect(),
         crate::types::Combinator::SubsequentSibling => {
+            // SEL-2：后续兄弟链与后代收集同属无界遍历（敌意页面
+            // 10 万兄弟 + `div:has(~ div)` = O(N²) 复合匹配），同一
+            // 上限封顶。
             let mut out = Vec::new();
             let mut cur = scope.next_sibling_element();
             while let Some(s) = cur {
                 out.push(s.clone());
+                if out.len() >= MAX_HAS_CANDIDATES {
+                    break;
+                }
                 cur = s.next_sibling_element();
             }
             out
@@ -222,14 +228,31 @@ fn matches_relative_complex<E: Element>(cs: &crate::types::ComplexSelector, scop
     })
 }
 
-/// Collect all descendants of `root` in document order (depth-first
-/// pre-order). Used by `:has()` with default Descendant combinator.
+/// SEL-2：`:has()` 单次匹配评估的候选元素上限。
+///
+/// 敌意页面可用 `div:has(div)` 在 N 元素页面构造 O(N²) 次复合匹配
+/// （每个元素评估 `:has` 都要遍历全部后代，每次匹配含 String 分配）。
+/// 解析期已拒绝嵌套 `:has`（时间维度 O(N^(k+1)) 不再可能），此上限
+/// 把单次评估的候选规模封顶：达到上限后停止收集，仅对已收集的前
+/// [`MAX_HAS_CANDIDATES`] 个候选求值 —— 接受极端页面的假阴性，换取
+/// 有界耗时（Chromium 对 `:has` 的 traversal 限制同类取舍）。
+const MAX_HAS_CANDIDATES: usize = 10_000;
+
+/// Collect (up to [`MAX_HAS_CANDIDATES`]) descendants of `root` in
+/// document order (depth-first pre-order). Used by `:has()` with the
+/// default Descendant combinator.
 fn collect_descendants<E: Element>(root: &E) -> Vec<E> {
     let mut out = Vec::new();
     fn walk<E: Element>(root: &E, out: &mut Vec<E>) {
         for child in root.child_elements() {
             out.push(child.clone());
+            if out.len() >= MAX_HAS_CANDIDATES {
+                return;
+            }
             walk(&child, out);
+            if out.len() >= MAX_HAS_CANDIDATES {
+                return;
+            }
         }
     }
     walk(root, &mut out);

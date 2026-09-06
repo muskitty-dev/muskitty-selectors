@@ -270,3 +270,104 @@ fn has_subsequent_sibling() {
     assert_eq!(cs.units.len(), 2);
     assert_eq!(cs.units[0].combinator, Some(Combinator::SubsequentSibling));
 }
+
+// ── SEL-2：:has() 不可嵌套（selectors-4 §4.5）──────────────────────
+//
+// WPT parse-has-disallow-nesting-has-inside-has 将
+// `.a:has(.b:has(.c))` 断言为 invalid；parse-has.json 将 `.a:not(:has(.b))`
+// 断言为 valid（顶层 :not 内的 :has 不受限）。
+
+/// SEL-2：`:has()` 参数内直接再嵌 `:has()` → 整条选择器无效。
+#[test]
+fn has_nested_inside_has_is_invalid() {
+    for src in [
+        ".a:has(.b:has(.c))",
+        ":has(:has(.c))",
+        ":has(> :has(.c))",
+        ".a:has(.b:has(> .c))",
+    ] {
+        assert!(
+            parse_a_selector(src).is_err(),
+            "{src:?} should be rejected: :has() cannot be nested within :has()"
+        );
+    }
+}
+
+/// SEL-2：限制透过 `:not()` 传递（非 forgiving，整条无效）——
+/// `:has(:not(:has(.c)))` 的内层 `:has` 仍处于外层 `:has` 参数内。
+#[test]
+fn has_nested_inside_not_inside_has_is_invalid() {
+    assert!(
+        parse_a_selector(":has(:not(:has(.c)))").is_err(),
+        ":has() nested through :not() within :has() must be rejected"
+    );
+}
+
+/// SEL-2：限制透过 `:nth-child(An+B of S)` 的 S 传递（非 forgiving）。
+#[test]
+fn has_nested_inside_of_clause_inside_has_is_invalid() {
+    assert!(
+        parse_a_selector(":has(:nth-child(2 of :has(.c)))").is_err(),
+        ":has() nested through the `of S` clause within :has() must be rejected"
+    );
+}
+
+/// SEL-2：`:is()`/`:where()` 是 forgiving —— 嵌套 `:has` 所在的失败
+/// selector 被静默丢弃，整体仍合法（WPT parse-has-forgiving-selector）。
+#[test]
+fn has_nested_inside_is_where_is_forgiving() {
+    for src in [
+        ":has(:is(:has(*)))",
+        ":has(:where(:has(*)))",
+        ":has(:is(:has(.a+.b)))",
+        ":has(:where(.a, :has(.b), .c))",
+    ] {
+        assert!(
+            parse_a_selector(src).is_ok(),
+            "{src:?} should parse: :is()/:where() forgivingly drop the nested :has()"
+        );
+    }
+}
+
+/// SEL-2：顶层（不在任何 `:has` 参数内）的 `:not(:has(..))`、
+/// `:is(.b:has(..) .d)` 合法 —— WPT parse-has.json 明确期望。
+#[test]
+fn has_inside_top_level_not_and_is_is_valid() {
+    for src in [
+        ".a:not(:has(.b))",
+        ".a:has(:not(.b))",
+        ".a:is(.b:has(.c) .d)",
+        ".a:has(.b:is(.c .d))",
+        ".a:has(.b):has(.c)",
+    ] {
+        assert!(parse_a_selector(src).is_ok(), "{src:?} should parse");
+    }
+}
+
+/// SEL-2：带参伪类的裸形式（无参数列表）无效 —— WPT parse-has.json
+/// 将 `:has` / `.a:has` / `.a:has b` 全部断言为 invalid。
+#[test]
+fn parameterised_pseudo_class_bare_form_is_invalid() {
+    for src in [
+        ":has",
+        ".a:has",
+        ".a:has b",
+        ":is",
+        ":not",
+        ":where",
+        ":nth-child",
+    ] {
+        assert!(
+            parse_a_selector(src).is_err(),
+            "{src:?} should be rejected: parameterised pseudo-class requires an argument list"
+        );
+    }
+}
+
+/// SEL-2：带参伪类的裸形式拒绝不影响简单伪类（`:hover` 等无参合法）。
+#[test]
+fn bare_simple_pseudo_class_still_valid() {
+    for src in ["a:hover", ":root", "a:empty", ":first-child + :last-child"] {
+        assert!(parse_a_selector(src).is_ok(), "{src:?} should parse");
+    }
+}

@@ -28,6 +28,14 @@ use serde_json::Value;
 use std::fs;
 use std::path::PathBuf;
 
+/// SEL-2：已修复到全绿的夹具升级为硬断言，防止回归。其余夹具仍为
+/// informational（selectors 74.8% → 的已知缺口按 goal.md 排后续轮）。
+const HARD_ASSERT_100: &[&str] = &[
+    "parse-has.json",
+    "parse-has-disallow-nesting-has-inside-has.json",
+    "parse-has-forgiving-selector.json",
+];
+
 #[derive(Debug, Clone, PartialEq)]
 enum Expectation {
     /// Strict parse must succeed (WPT `test_valid_selector` and
@@ -184,8 +192,31 @@ fn wpt_selector_parsing_suite() {
         total > 0,
         "no test cases were loaded — fixture data missing?"
     );
+
+    // SEL-2 硬断言：已全绿的夹具不允许再出现失败（防回归）。其余
+    // 夹具保持 informational。failures 的 file 字段是 fixture 的
+    // `source`（如 "parse-has.html"），per_file 的 name 是 json 文件
+    // 名（如 "parse-has.json"），按去扩展名 stem 匹配。
+    for (name, _, f) in &per_file {
+        if HARD_ASSERT_100.contains(&name.as_str()) {
+            let stem = name.trim_end_matches(".json");
+            let detail = failures
+                .iter()
+                .filter(|(file, _, _, _)| file.trim_end_matches(".html") == stem)
+                .map(|(_, input, kind, detail)| format!("  {input:?} ({kind}){detail}"))
+                .collect::<Vec<_>>()
+                .join("\n");
+            assert!(
+                *f == 0,
+                "{name}: {f} failing case(s) — this fixture is guarded by a hard \
+                 assertion (SEL-2); a regression was introduced:\n{detail}"
+            );
+        }
+    }
+
     eprintln!(
-        "PASS RATE: {:.1}% ({}/{}) — informational; not asserting a hard threshold yet.",
+        "PASS RATE: {:.1}% ({}/{}) — informational for non-guarded fixtures; \
+         HARD_ASSERT_100 fixtures are hard-asserted.",
         pct, total_pass, total
     );
 }
