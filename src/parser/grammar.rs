@@ -67,7 +67,7 @@ impl Grammar for SelectorGrammar {
         if matches!(stream.next_token(), Token::Eof) {
             return Ok(Err(SelectorParseError::EmptySelector));
         }
-        match list::parse_selector_list(&mut stream) {
+        match list::parse_selector_list(&mut stream, 0) {
             Ok(list) => {
                 // §3 grammar: trailing tokens after the selector list
                 // (other than whitespace) make the source invalid.
@@ -103,7 +103,7 @@ impl Grammar for RelativeSelectorGrammar {
         if matches!(stream.next_token(), Token::Eof) {
             return Ok(Err(SelectorParseError::EmptySelector));
         }
-        match relative::parse_relative_selector_list(&mut stream) {
+        match relative::parse_relative_selector_list(&mut stream, 0) {
             Ok(list) => {
                 stream.discard_whitespace();
                 if !stream.is_empty() {

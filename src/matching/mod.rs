@@ -24,7 +24,8 @@ pub use dom_impl::DomElement;
 pub mod pseudo_matcher;
 pub mod simple_matcher;
 
-use crate::types::{ComplexSelector, SelectorList};
+use crate::types::{Combinator, ComplexSelector, ComplexSelectorUnit, SelectorList};
+use std::collections::HashMap;
 
 /// §3 L858-873 + §18 L4879-4900: read-only view of an element in a
 /// tree.
@@ -143,6 +144,82 @@ fn walk_tree<E: Element, F: FnMut(&E)>(root: &E, f: &mut F) {
     }
 }
 
+/// SEL-1：单次（元素 × complex selector）匹配的左向匹配状态。
+///
+/// 三件事：
+/// - **祖先链**（`chain`）：subject 的祖先，`chain[0]` = 父元素，
+///   `chain[i]` 再向上，**惰性**增长（`ensure_chain` 只在索引被访问时
+///   才向上走一步，浅组合器规则不为深 DOM 付全程 walk）。左向匹配
+///   到访的任何元素的 parent 必为 subject 的祖先（归纳：从 subject
+///   出发，Child/Descendant 步上移一层、sibling 步同层，而同层兄弟的
+///   parent 同为链上元素），因此 Descendant/Child 候选可按
+///   `chain[level..]` 索引访问，元素无需身份标识。
+/// - **Descendant 记忆化**（`memo`）：`continues_leftward(remaining,
+///   chain[i])` 的结果以 `(i, remaining 起始下标)` 为 key 缓存。
+///   `.x .x … .x`（k 个组合器）对全 `.x` 的 D 深 DOM 原始回溯为
+///   C(D-1, k-1) 条候选路径（k=10、D=100 ≈ 1.7×10¹²，单条规则即可
+///   挂起数分钟）；记忆化后每 (祖先, 剩余后缀) 只求值一次，D×k 封顶。
+/// - **步数预算**（`budget`）：compound 匹配计数，超限按不匹配降级
+///   （审计 SEL-1 ①，10 万/元素×规则）。兄弟组合器（`~`）无记忆化，
+///   宽兄弟树 × `a ~ a ~ …` 仍是指数路径计数，由预算兜底。
+struct MatchState<E: Element> {
+    /// subject 的祖先链（惰性）。`chain[i]` 的层级（距 subject 的
+    /// parent 步数）为 `i + 1`。
+    chain: Vec<E>,
+    /// `chain` 已延伸到根，不再增长。
+    chain_complete: bool,
+    /// `(chain 索引, remaining 起始下标)` → `continues_leftward` 结果。
+    memo: HashMap<(usize, usize), bool>,
+    /// 剩余 compound 匹配步数。
+    budget: usize,
+}
+
+/// SEL-1：每次（元素 × complex selector）匹配的 compound 匹配步数
+/// 上限。超限按不匹配降级 —— 真实页面单条规则的左向匹配远达不到
+/// （Descendant 已被记忆化压到 D×k），仅拦截敌意的兄弟组合器路径
+/// 爆炸与病态构造。
+const MAX_MATCH_STEPS: usize = 100_000;
+
+impl<E: Element> MatchState<E> {
+    fn new() -> Self {
+        Self {
+            chain: Vec::new(),
+            chain_complete: false,
+            memo: HashMap::new(),
+            budget: MAX_MATCH_STEPS,
+        }
+    }
+
+    /// 预算内做一次 compound 匹配；预算耗尽按不匹配降级。
+    fn try_compound(&mut self, compound: &crate::types::CompoundSelector, element: &E) -> bool {
+        if self.budget == 0 {
+            return false;
+        }
+        self.budget -= 1;
+        simple_matcher::matches_compound(compound, element)
+    }
+
+    /// 确保祖先链覆盖到索引 `idx`（含）。从已知最深处向上走一步，
+    /// 到根即标记 `chain_complete`。
+    ///
+    /// 空链分支（`chain.last() == None`）只在层级 0 被调用时可达：
+    /// 层级 ≥ 1 的元素必然经由某个链上元素到达（chain 已非空）。
+    /// 层级 0 的 `element` 是 subject 或其兄弟，二者 parent 同为
+    /// `chain[0]`，故从 `element` 起步等价于从 subject 起步。
+    fn ensure_chain(&mut self, level0_element: &E, idx: usize) {
+        while self.chain.len() <= idx && !self.chain_complete {
+            let next = match self.chain.last() {
+                Some(deepest) => deepest.parent_element(),
+                None => level0_element.parent_element(),
+            };
+            match next {
+                Some(ancestor) => self.chain.push(ancestor),
+                None => self.chain_complete = true,
+            }
+        }
+    }
+}
+
 /// §18 L4902-4919: Match a complex selector against an element,
 /// processing compound selectors right-to-left.
 ///
@@ -159,12 +236,13 @@ fn matches_complex<E: Element>(cs: &ComplexSelector, element: &E) -> bool {
     // §18 L4908: the rightmost compound (units[0], the subject)
     // must match `element`.
     let subject = &cs.units[0];
-    if !simple_matcher::matches_compound(&subject.compound, element) {
-        return false;
-    }
-    // §18 L4911-4912: if there is only one compound, success.
+    // 单 compound 选择器不做左向 walk，无需构建匹配状态（热路径）。
     if cs.units.len() == 1 {
-        return true;
+        return simple_matcher::matches_compound(&subject.compound, element);
+    }
+    let mut state = MatchState::new();
+    if !state.try_compound(&subject.compound, element) {
+        return false;
     }
     // §18 L4914-4919: otherwise, walk leftward using the subject's
     // combinator to find candidates for units[1..].
@@ -172,7 +250,7 @@ fn matches_complex<E: Element>(cs: &ComplexSelector, element: &E) -> bool {
         Some(c) => c,
         None => return true, // shouldn't happen for len > 1
     };
-    walk_leftward(&cs.units[1..], element, combinator)
+    walk_leftward(&cs.units[1..], 1, element, 0, combinator, &mut state)
 }
 
 /// Walk leftward from `element` by `combinator` to find candidates
@@ -180,54 +258,69 @@ fn matches_complex<E: Element>(cs: &ComplexSelector, element: &E) -> bool {
 /// (rightward) unit, so it describes how `remaining[0]` is related
 /// to `element` (e.g. for `Child`, `remaining[0]` is the parent of
 /// `element`).
+///
+/// SEL-1：`start` 是 `remaining` 在完整单元序列中的起始下标（记忆化
+/// key 的一部分）；`level` 是 `element` 的层级（距 subject 的 parent
+/// 步数，sibling 步不改变层级），Descendant/Child 候选 = `state.chain`
+/// 自 `level` 起的后缀。
 fn walk_leftward<E: Element>(
-    remaining: &[crate::types::ComplexSelectorUnit],
+    remaining: &[ComplexSelectorUnit],
+    start: usize,
     element: &E,
-    combinator: crate::types::Combinator,
+    level: usize,
+    combinator: Combinator,
+    state: &mut MatchState<E>,
 ) -> bool {
     let next_unit = &remaining[0];
     match combinator {
-        crate::types::Combinator::Descendant => {
-            // §15 L4369: any ancestor of `element`.
-            let mut ancestor = element.parent_element();
-            while let Some(parent) = ancestor {
-                if simple_matcher::matches_compound(&next_unit.compound, &parent)
-                    && continues_leftward(remaining, &parent)
+        Combinator::Descendant => {
+            // §15 L4369: any ancestor of `element` = chain[level..]。
+            let mut idx = level;
+            loop {
+                state.ensure_chain(element, idx);
+                if idx >= state.chain.len() {
+                    return false;
+                }
+                let ancestor = state.chain[idx].clone();
+                if state.try_compound(&next_unit.compound, &ancestor)
+                    && continues_on_chain(remaining, start, idx, &ancestor, state)
                 {
                     return true;
                 }
-                ancestor = parent.parent_element();
+                idx += 1;
             }
-            false
         }
-        crate::types::Combinator::Child => {
-            // §15 L4376: direct parent only.
-            if let Some(parent) = element.parent_element() {
-                if simple_matcher::matches_compound(&next_unit.compound, &parent)
-                    && continues_leftward(remaining, &parent)
+        Combinator::Child => {
+            // §15 L4376: direct parent only = chain[level]。
+            state.ensure_chain(element, level);
+            if level < state.chain.len() {
+                let parent = state.chain[level].clone();
+                if state.try_compound(&next_unit.compound, &parent)
+                    && continues_on_chain(remaining, start, level, &parent, state)
                 {
                     return true;
                 }
             }
             false
         }
-        crate::types::Combinator::NextSibling => {
-            // §15 L4383: direct previous sibling only.
+        Combinator::NextSibling => {
+            // §15 L4383: direct previous sibling only. 兄弟不在祖先链
+            // 上（无记忆化，预算兜底），层级与 `element` 相同。
             if let Some(prev) = element.previous_sibling_element() {
-                if simple_matcher::matches_compound(&next_unit.compound, &prev)
-                    && continues_leftward(remaining, &prev)
+                if state.try_compound(&next_unit.compound, &prev)
+                    && continues_leftward(remaining, start, &prev, level, state)
                 {
                     return true;
                 }
             }
             false
         }
-        crate::types::Combinator::SubsequentSibling => {
+        Combinator::SubsequentSibling => {
             // §15 L4390: any previous sibling.
             let mut prev = element.previous_sibling_element();
             while let Some(sibling) = prev {
-                if simple_matcher::matches_compound(&next_unit.compound, &sibling)
-                    && continues_leftward(remaining, &sibling)
+                if state.try_compound(&next_unit.compound, &sibling)
+                    && continues_leftward(remaining, start, &sibling, level, state)
                 {
                     return true;
                 }
@@ -242,8 +335,11 @@ fn walk_leftward<E: Element>(
 /// leftward walk if there are more units. If `remaining[0]` is the
 /// leftmost unit, the match is complete.
 fn continues_leftward<E: Element>(
-    remaining: &[crate::types::ComplexSelectorUnit],
+    remaining: &[ComplexSelectorUnit],
+    start: usize,
     element: &E,
+    level: usize,
+    state: &mut MatchState<E>,
 ) -> bool {
     if remaining.len() == 1 {
         // remaining[0] is leftmost; we've already matched it.
@@ -255,5 +351,33 @@ fn continues_leftward<E: Element>(
         Some(c) => c,
         None => return true, // leftmost, already matched
     };
-    walk_leftward(&remaining[1..], element, next_combinator)
+    walk_leftward(
+        &remaining[1..],
+        start + 1,
+        element,
+        level,
+        next_combinator,
+        state,
+    )
+}
+
+/// SEL-1：`continues_leftward` 的记忆化入口，仅用于**链上**元素
+/// （`state.chain[idx]`，层级 `idx + 1`）。key = (链索引, remaining
+/// 起始下标)：同一 (祖先元素, 剩余后缀) 子问题在回溯中被重复求值，
+/// 结果只取决于这两者。兄弟分支的元素不在链上，直接走
+/// [`continues_leftward`]（无记忆化，由步数预算兜底）。
+fn continues_on_chain<E: Element>(
+    remaining: &[ComplexSelectorUnit],
+    start: usize,
+    idx: usize,
+    element: &E,
+    state: &mut MatchState<E>,
+) -> bool {
+    let key = (idx, start);
+    if let Some(&cached) = state.memo.get(&key) {
+        return cached;
+    }
+    let result = continues_leftward(remaining, start, element, idx + 1, state);
+    state.memo.insert(key, result);
+    result
 }

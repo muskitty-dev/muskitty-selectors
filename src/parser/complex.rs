@@ -72,13 +72,14 @@ const MAX_COMPLEX_SELECTOR_UNITS: usize = 1024;
 
 pub fn parse_complex_selector(
     stream: &mut TokenStream,
+    has_depth: u8,
 ) -> Result<ComplexSelector, SelectorParseError> {
     // Build in source order (left-to-right), then reverse so storage
     // is rightmost-first. The combinator goes on the rightward unit
     // (the one just parsed), per the storage convention documented on
     // [`crate::types::ComplexSelector`].
     let mut units: Vec<ComplexSelectorUnit> = Vec::new();
-    let first_compound = parse_compound_selector(stream)?;
+    let first_compound = parse_compound_selector(stream, has_depth)?;
     units.push(ComplexSelectorUnit {
         compound: first_compound,
         combinator: None,
@@ -127,7 +128,7 @@ pub fn parse_complex_selector(
                     "trailing combinator in complex selector".into(),
                 ));
             }
-            let next_compound = parse_compound_selector(stream)?;
+            let next_compound = parse_compound_selector(stream, has_depth)?;
             // Combinator goes on the new (rightward) unit.
             units.push(ComplexSelectorUnit {
                 compound: next_compound,
@@ -152,7 +153,7 @@ pub fn parse_complex_selector(
 
         // Implicit descendant combinator (§15 L4363). Parse the next
         // compound.
-        let next_compound = parse_compound_selector(stream)?;
+        let next_compound = parse_compound_selector(stream, has_depth)?;
         units.push(ComplexSelectorUnit {
             compound: next_compound,
             combinator: Some(Combinator::Descendant),
