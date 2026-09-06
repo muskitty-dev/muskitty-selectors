@@ -25,6 +25,7 @@ pub mod pseudo_matcher;
 pub mod simple_matcher;
 
 use crate::types::{Combinator, ComplexSelector, ComplexSelectorUnit, SelectorList};
+use std::cell::Cell;
 use std::collections::HashMap;
 
 /// §3 L858-873 + §18 L4879-4900: read-only view of an element in a
@@ -105,14 +106,93 @@ pub trait Element: Clone {
 /// Returns `true` if any complex selector in `list` matches `element`
 /// (right-to-left walk per §18 L4902-4919).
 pub fn matches<E: Element>(list: &SelectorList, element: &E) -> bool {
-    list.0.iter().any(|cs| matches_complex(cs, element))
+    // SEL-3：建立匹配会话；列表内每个 complex 各享满额栈预算
+    // （列表项之间独立，与 SEL-1 每 complex 新建 MatchState 一致）。
+    let saved = enter_match_session();
+    let result = list.0.iter().any(|cs| {
+        reset_match_budget();
+        matches_complex(cs, element)
+    });
+    exit_match_session(saved);
+    result
+}
+
+// ── SEL-3：匹配期共享栈预算 ─────────────────────────────────────
+//
+// 逻辑组合参数（`:is`/`:not`/`:where` 列表、`:has` 相对选择器、
+// `:nth-* of S` 过滤）在匹配期重新进入 complex 匹配，每层各享一份
+// 1024 单元上限（解析期 `MAX_COMPLEX_SELECTOR_UNITS` 只约束单个
+// complex）。栈深 = 嵌套层 × 每层单元数：解析期嵌套封顶 32 后仍有
+// 32 × 1024 ≈ 32k 帧的溢出窗口。本预算把（嵌套重入 + 左向单元
+// 消费）合并到单一池中，超限按不匹配降级（与 SEL-1 步数预算同
+// 语义），令单次（元素 × complex）匹配的活跃栈帧有硬上界。
+
+/// SEL-3：单次（元素 × complex selector）匹配的共享栈预算上限
+/// （嵌套重入 + 左向单元消费合计）。
+const MAX_MATCH_STACK_BUDGET: usize = 2048;
+
+thread_local! {
+    /// 剩余预算。`None` = 当前线程无进行中的顶层匹配会话。顶层
+    /// [`matches`] 进入时建立并保存旧值；嵌套重入点在 `None` 时
+    /// 惰性建立（覆盖绕过 `matches` 直接调用 `matches_pseudo_class`
+    /// 等 pub 子匹配器的场景——该路径不复位，多次调用共享递减，
+    /// 仅影响预算耗尽后的降级，无安全问题）。
+    static MATCH_STACK_BUDGET: Cell<Option<usize>> = const { Cell::new(None) };
+}
+
+/// 进入顶层匹配会话，返回需在退出时恢复的旧值。
+fn enter_match_session() -> Option<usize> {
+    MATCH_STACK_BUDGET.with(|c| {
+        let old = c.get();
+        c.set(Some(MAX_MATCH_STACK_BUDGET));
+        old
+    })
+}
+
+/// 会话内将预算重置为满额（每个 complex 一次）。
+fn reset_match_budget() {
+    MATCH_STACK_BUDGET.with(|c| {
+        if c.get().is_some() {
+            c.set(Some(MAX_MATCH_STACK_BUDGET));
+        }
+    });
+}
+
+/// 退出顶层匹配会话，恢复旧值。
+fn exit_match_session(saved: Option<usize>) {
+    MATCH_STACK_BUDGET.with(|c| c.set(saved));
+}
+
+/// SEL-3：消费 1 单位栈预算。返回 `false` = 预算耗尽，调用方按不
+/// 匹配降级。会话不存在时惰性建立满额会话。
+pub(crate) fn consume_match_budget() -> bool {
+    MATCH_STACK_BUDGET.with(|c| {
+        let budget = match c.get() {
+            None => {
+                c.set(Some(MAX_MATCH_STACK_BUDGET));
+                MAX_MATCH_STACK_BUDGET
+            }
+            Some(b) => b,
+        };
+        if budget == 0 {
+            return false;
+        }
+        c.set(Some(budget - 1));
+        true
+    })
 }
 
 /// `pub(crate)` wrapper around [`matches`] for use by sibling modules
 /// (e.g. `pseudo_matcher` resolving `:nth-child(An+B of S)` filters).
 /// Kept separate from [`matches`] so the public API surface stays
 /// flat.
+///
+/// SEL-3：这是逻辑组合参数重入 complex 匹配的入口之一，消费 1 单位
+/// 栈预算（预算耗尽按不匹配降级）。
 pub(crate) fn matches_complex_list<E: Element>(list: &SelectorList, element: &E) -> bool {
+    if !consume_match_budget() {
+        return false;
+    }
     list.0.iter().any(|cs| matches_complex(cs, element))
 }
 
@@ -271,6 +351,10 @@ fn walk_leftward<E: Element>(
     combinator: Combinator,
     state: &mut MatchState<E>,
 ) -> bool {
+    // SEL-3：每帧消费 1 单位栈预算，令活跃递归深度有硬上界。
+    if !consume_match_budget() {
+        return false;
+    }
     let next_unit = &remaining[0];
     match combinator {
         Combinator::Descendant => {

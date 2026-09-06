@@ -606,9 +606,14 @@ pub enum PseudoClassOrLegacy {
 ///
 /// `has_depth` 是当前 `:has()` 参数的嵌套深度（0 = 不在任何 `:has()`
 /// 参数内），用于执行 selectors-4 §4.5 的 ":has() 不可嵌套" 规则。
+///
+/// `sel_depth` 是当前选择器列表参数（`:is`/`:where`/`:not`/`:has`/
+/// `nth-* of S`）的嵌套深度（SEL-3，0 = 顶层），用于解析期封顶——见
+/// [`MAX_SELECTOR_LIST_NESTING`]。
 pub fn parse_pseudo_class_or_legacy(
     stream: &mut TokenStream,
     has_depth: u8,
+    sel_depth: u8,
 ) -> Result<PseudoClassOrLegacy, SelectorParseError> {
     // Must start with `:`.
     if !matches!(stream.next_token(), Token::Colon) {
@@ -692,7 +697,7 @@ pub fn parse_pseudo_class_or_legacy(
             }
             // 参数解析失败同样回退到 `:` 之前（流位置回到失败构造起点，
             // mark 弹出），供上层 forgiving 恢复完整跳过该构造。
-            let argument = match parse_pseudo_class_argument(stream, &lower, has_depth) {
+            let argument = match parse_pseudo_class_argument(stream, &lower, has_depth, sel_depth) {
                 Ok(argument) => argument,
                 Err(e) => {
                     stream.restore_mark();
@@ -728,6 +733,29 @@ pub fn parse_pseudo_class_or_legacy(
     Ok(PseudoClassOrLegacy::Class(result))
 }
 
+/// SEL-3：选择器列表参数（`:is`/`:where`/`:not`/`:has`/`nth-* of S`）的
+/// 最大嵌套层数。
+///
+/// 此前逻辑组合嵌套仅受 css-parser 括号深度约束：`:is(:is(…))` × 1000 层
+/// 令解析期递归无界（每层 ~6 帧），且匹配期栈深 = 嵌套层 × 每层单元数
+/// （1024 上限是**每个 complex** 的），~4 MB CSS 即可栈溢出 abort。32 远
+/// 超真实样式表（Chromium 同类上限为个位数到十位数）；匹配侧另有共享
+/// 栈预算兜底（matching/mod.rs，SEL-3）。
+pub(crate) const MAX_SELECTOR_LIST_NESTING: u8 = 32;
+
+/// SEL-3：`sel_depth + 1` 若超过 [`MAX_SELECTOR_LIST_NESTING`] 则返回
+/// `InvalidSelector`，否则返回加一后的深度。
+fn checked_selector_nesting(sel_depth: u8) -> Result<u8, SelectorParseError> {
+    let next = sel_depth + 1;
+    if next > MAX_SELECTOR_LIST_NESTING {
+        return Err(SelectorParseError::InvalidSelector(format!(
+            "selector-list nesting exceeds {MAX_SELECTOR_LIST_NESTING} levels \
+             (:is/:not/:where/:has/of S)"
+        )));
+    }
+    Ok(next)
+}
+
 /// Parse the argument of a parameterised pseudo-class.
 ///
 /// Dispatches based on the pseudo-class name:
@@ -753,13 +781,14 @@ fn parse_pseudo_class_argument(
     stream: &mut TokenStream,
     name: &str,
     has_depth: u8,
+    sel_depth: u8,
 ) -> Result<PseudoClassArgument, SelectorParseError> {
     match name {
         "nth-child" | "nth-last-child" => {
             // §13.3 L3968 / §13.4 L4077: `An+B [of S]?`. Only nth-child and
             // nth-last-child accept the `of S` clause.
             let an_plus_b = parse_an_plus_b(stream)?;
-            let of_s = parse_optional_of_selector_list(stream, has_depth)?;
+            let of_s = parse_optional_of_selector_list(stream, has_depth, sel_depth)?;
             Ok(PseudoClassArgument::AnPlusB(an_plus_b, of_s))
         }
         "nth-of-type" | "nth-last-of-type" => {
@@ -773,16 +802,21 @@ fn parse_pseudo_class_argument(
         // complex selector parsed independently; failures silently
         // dropped (§3 L4765-4813). has_depth 原样透传：限制在 forgiving
         // 参数内保持激活，嵌套 `:has(` 所在的失败 selector 被丢弃。
+        // SEL-3：sel_depth + 1 进入（forgiving 参数内超限构造被静默
+        // 丢弃，整体仍合法）。
         "is" | "where" => {
-            let list = parse_forgiving_selector_list(stream, has_depth)?;
+            let next = checked_selector_nesting(sel_depth)?;
+            let list = parse_forgiving_selector_list(stream, has_depth, next)?;
             Ok(PseudoClassArgument::SelectorList(list))
         }
         // §4.3 L1564-1607: complex-selector-list, non-forgiving.
         // Level 4 permits complex selectors as the argument.
         // has_depth 原样透传：`:has(:not(:has(..)))` 的内层 `:has`
-        // 仍处于外层 `:has` 参数内，必须拒绝。
+        // 仍处于外层 `:has` 参数内，必须拒绝。SEL-3：sel_depth + 1
+        // 进入；非 forgiving，超限错误向上传播使整条选择器无效。
         "not" => {
-            let list = parse_selector_list(stream, has_depth)?;
+            let next = checked_selector_nesting(sel_depth)?;
+            let list = parse_selector_list(stream, has_depth, next)?;
             Ok(PseudoClassArgument::SelectorList(list))
         }
         // §4.5 L1700: relative-selector-list, non-forgiving. Each
@@ -790,8 +824,10 @@ fn parse_pseudo_class_argument(
         // (default descendant) and is anchored against an implicit
         // :scope. 进入 `:has` 参数：has_depth + 1（顶层
         // `:not(:has(..))` / `:is(:has(..))` 合法，其内从 1 起算）。
+        // SEL-3：sel_depth + 1 进入。
         "has" => {
-            let list = parse_relative_selector_list(stream, has_depth + 1)?;
+            let next = checked_selector_nesting(sel_depth)?;
+            let list = parse_relative_selector_list(stream, has_depth + 1, next)?;
             Ok(PseudoClassArgument::SelectorList(list))
         }
         _ => {
@@ -830,6 +866,7 @@ fn parse_pseudo_class_argument(
 fn parse_optional_of_selector_list(
     stream: &mut TokenStream,
     has_depth: u8,
+    sel_depth: u8,
 ) -> Result<Option<SelectorList>, SelectorParseError> {
     stream.discard_whitespace();
     match stream.next_token() {
@@ -843,7 +880,9 @@ fn parse_optional_of_selector_list(
             // §13.3 L3968: S is a <selector-list> (non-forgiving).
             // Reuse parse_selector_list from list.rs. has_depth 原样
             // 透传（`:has(:nth-child(2 of :has(..)))` 必须拒绝）。
-            let list = crate::parser::list::parse_selector_list(stream, has_depth)?;
+            // SEL-3：of S 同为选择器列表参数，sel_depth + 1 进入。
+            let next = checked_selector_nesting(sel_depth)?;
+            let list = crate::parser::list::parse_selector_list(stream, has_depth, next)?;
             Ok(Some(list))
         }
         // Anything else after An+B is a structural error.

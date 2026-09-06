@@ -143,6 +143,8 @@ fn an_plus_b_matches(a: i64, b: i64, index: i64) -> bool {
 /// §4.2/§4.4: `:is(args)` / `:where(args)` match if any complex
 /// selector in args matches the element. (Specificity differs per
 /// §17, but matching is identical.)
+///
+/// SEL-3：重入 complex 匹配经 [`matches_complex_list`] 消费栈预算。
 fn matches_is_where<E: Element>(pc: &PseudoClass, element: &E) -> bool {
     match pc.argument.as_ref() {
         Some(PseudoClassArgument::SelectorList(list)) => {
@@ -159,7 +161,13 @@ fn matches_is_where<E: Element>(pc: &PseudoClass, element: &E) -> bool {
 /// SP-8 scope: handles single-compound relative selectors. Multi-
 /// compound relative selectors (e.g. `:has(.a .b)`) fall back to
 /// `false` for now.
+///
+/// SEL-3：`:has` 参数求值消费 1 单位栈预算（其 compound 内再嵌
+/// `:is` 等经 [`matches_complex_list`] 另行消费）。
 fn matches_has<E: Element>(pc: &PseudoClass, element: &E) -> bool {
+    if !crate::matching::consume_match_budget() {
+        return false;
+    }
     let list = match pc.argument.as_ref() {
         Some(PseudoClassArgument::SelectorList(list)) => list,
         _ => return false,

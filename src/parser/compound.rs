@@ -53,6 +53,7 @@ use muskitty_css::tokenizer::Token;
 pub fn parse_compound_selector(
     stream: &mut TokenStream,
     has_depth: u8,
+    sel_depth: u8,
 ) -> Result<CompoundSelector, SelectorParseError> {
     // §3 L750-752: type selector (or universal selector) must come
     // first if present.
@@ -79,7 +80,7 @@ pub fn parse_compound_selector(
             compound.subclasses.push(SubclassSelector::Attribute(attr));
             continue;
         }
-        match parse_pseudo_class_or_legacy(stream, has_depth)? {
+        match parse_pseudo_class_or_legacy(stream, has_depth, sel_depth)? {
             PseudoClassOrLegacy::None => break,
             PseudoClassOrLegacy::Class(pc) => {
                 compound.subclasses.push(SubclassSelector::PseudoClass(pc));
@@ -118,7 +119,7 @@ pub fn parse_compound_selector(
         // pseudo-class here attaches to the most recent pseudo-compound
         // (e.g. `::before:hover`); a legacy pseudo-element starts a
         // new pseudo-compound entry.
-        match parse_pseudo_class_or_legacy(stream, has_depth)? {
+        match parse_pseudo_class_or_legacy(stream, has_depth, sel_depth)? {
             PseudoClassOrLegacy::None => break,
             PseudoClassOrLegacy::Class(pc) => {
                 if let Some(last) = compound.pseudo_compounds.last_mut() {

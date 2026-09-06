@@ -67,19 +67,25 @@ use muskitty_css::tokenizer::Token;
 /// 匹配侧 `walk_leftward` 对每个匹配单元递归（约 2 帧/单元），单元数不受限
 /// 时，超长选择器（攻击者可写出任意长度）+ 足够深的 DOM 可栈溢出。解析期
 /// 封顶，超限返回 `InvalidSelector`。1024 远超任何真实样式表（Chromium 的
-/// 每规则选择器上限也是千级），匹配侧栈深 ≤ ~2k 帧，安全。
+/// 每规则选择器上限也是千级）。
+///
+/// 注意（SEL-3 复核）：1024 上限是**每个 complex** 的——逻辑组合
+/// （`:is`/`:not`/`:where`）嵌套时每层各享一份，栈深 = 嵌套层 × 每层
+/// 单元数。嵌套由解析期 [`MAX_SELECTOR_LIST_NESTING`]（simple.rs）与
+/// 匹配期共享栈预算（matching/mod.rs）共同封顶，本上限只约束单层。
 const MAX_COMPLEX_SELECTOR_UNITS: usize = 1024;
 
 pub fn parse_complex_selector(
     stream: &mut TokenStream,
     has_depth: u8,
+    sel_depth: u8,
 ) -> Result<ComplexSelector, SelectorParseError> {
     // Build in source order (left-to-right), then reverse so storage
     // is rightmost-first. The combinator goes on the rightward unit
     // (the one just parsed), per the storage convention documented on
     // [`crate::types::ComplexSelector`].
     let mut units: Vec<ComplexSelectorUnit> = Vec::new();
-    let first_compound = parse_compound_selector(stream, has_depth)?;
+    let first_compound = parse_compound_selector(stream, has_depth, sel_depth)?;
     units.push(ComplexSelectorUnit {
         compound: first_compound,
         combinator: None,
@@ -128,7 +134,7 @@ pub fn parse_complex_selector(
                     "trailing combinator in complex selector".into(),
                 ));
             }
-            let next_compound = parse_compound_selector(stream, has_depth)?;
+            let next_compound = parse_compound_selector(stream, has_depth, sel_depth)?;
             // Combinator goes on the new (rightward) unit.
             units.push(ComplexSelectorUnit {
                 compound: next_compound,
@@ -153,7 +159,7 @@ pub fn parse_complex_selector(
 
         // Implicit descendant combinator (§15 L4363). Parse the next
         // compound.
-        let next_compound = parse_compound_selector(stream, has_depth)?;
+        let next_compound = parse_compound_selector(stream, has_depth, sel_depth)?;
         units.push(ComplexSelectorUnit {
             compound: next_compound,
             combinator: Some(Combinator::Descendant),
