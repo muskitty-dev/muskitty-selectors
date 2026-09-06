@@ -371,3 +371,72 @@ fn bare_simple_pseudo_class_still_valid() {
         assert!(parse_a_selector(src).is_ok(), "{src:?} should parse");
     }
 }
+
+// —— SEL-3：选择器列表参数嵌套上限（:is/:not/:where/:has/of S）——
+
+/// 嵌套 `:not(` × N 层的选择器字符串。
+fn nested(name: &str, depth: usize) -> String {
+    let mut s = String::new();
+    for _ in 0..depth {
+        s.push_str(&format!(":{name}("));
+    }
+    s.push('a');
+    for _ in 0..depth {
+        s.push(')');
+    }
+    s
+}
+
+/// SEL-3：`:not` 嵌套 ≤ 32 合法，第 33 层 InvalidSelector（非
+/// forgiving，错误向上传播）。修复前逻辑组合嵌套无解析期上限，
+/// 解析递归与匹配栈深均无界（~4 MB CSS 可栈溢出 abort）。
+#[test]
+fn not_nesting_capped_at_32() {
+    assert!(
+        parse_a_selector(&nested("not", 32)).is_ok(),
+        "32 levels of :not must parse"
+    );
+    assert!(
+        parse_a_selector(&nested("not", 33)).is_err(),
+        "33 levels of :not must be rejected (InvalidSelector)"
+    );
+}
+
+/// SEL-3：`:is` 参数为 forgiving 列表——第 33 层的失败 complex 被
+/// 静默丢弃，整体仍合法（解析 Ok，AST 深度封顶 32）。
+#[test]
+fn is_nesting_forgiving_degrades_gracefully() {
+    assert!(
+        parse_a_selector(&nested("is", 33)).is_ok(),
+        "deep :is must degrade gracefully via forgiving-list dropping"
+    );
+}
+
+/// SEL-3：`nth-* of S` 的 of 子句同为选择器列表参数，计入同一
+/// 嵌套计数。
+#[test]
+fn nth_of_nesting_capped_at_32() {
+    let mut ok = String::new();
+    for _ in 0..32 {
+        ok.push_str(":nth-child(1 of ");
+    }
+    ok.push('a');
+    for _ in 0..32 {
+        ok.push(')');
+    }
+    assert!(
+        parse_a_selector(&ok).is_ok(),
+        "32 levels of of-S must parse"
+    );
+
+    // 外包一层 :not（非 forgiving，错误向上传播）：:not 占 1 层 +
+    // 32 层 of S = 33 > 32 → InvalidSelector。注意不能用 :is 包裹
+    // 验证——forgiving 列表会把深层失败静默丢弃，整体仍解析成功。
+    let mut bad = ok;
+    bad.insert_str(0, ":not(");
+    bad.push(')');
+    assert!(
+        parse_a_selector(&bad).is_err(),
+        "wrapping a 32-deep of-S chain in :not exceeds the nesting cap"
+    );
+}

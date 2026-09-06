@@ -359,3 +359,63 @@ fn dom_first_child_pseudo() {
     assert!(matches(&list, &dom_a));
     assert!(!matches(&list, &dom_b));
 }
+
+// —— SEL-3：匹配期共享栈预算（逻辑组合嵌套 × 每层单元数）——
+
+/// 构造 `a > a > … > a > <tail>`（`prefix` 个 a 单元 + tail 复合）。
+fn child_chain(prefix: usize, tail: &str) -> String {
+    let mut s = String::with_capacity(prefix * 4 + tail.len());
+    for _ in 0..prefix {
+        s.push_str("a > ");
+    }
+    s.push_str(tail);
+    s
+}
+
+/// 构造深度 `depth` 的 `<a>` 祖先链，返回 `(链顶, 最深元素)`。链顶
+/// 必须由调用方持有（子节点对父仅持 Weak）。
+fn deep_a_chain(depth: usize) -> (DomElement, DomElement) {
+    let doc = Node::new_document();
+    let top = Node::new_element_html("a", vec![], &doc);
+    let mut cur = top.clone();
+    for _ in 1..depth {
+        let child = Node::new_element_html("a", vec![], &doc);
+        muskitty_dom::tree::append_child(&cur, child.clone()).expect("append");
+        cur = child;
+    }
+    (DomElement::new(top), DomElement::new(cur))
+}
+
+/// SEL-3：嵌套 × 单元数在预算内（3 层 × 599 单元 + 3 次重入 ≈ 1800
+/// < 2048）时深层链正确匹配——预算不得过热误伤合法选择器。
+#[test]
+fn logical_nesting_within_budget_matches() {
+    let s1 = child_chain(598, "a"); // 599 units
+    let s2 = child_chain(598, &format!(":is({s1})")); // 599 a's + :is tail
+    let s3 = child_chain(598, &format!(":is({s2})"));
+    let list = parse_a_selector(&s3).expect("parses");
+    // 3 × 599 = 1797 祖先即可匹配；建 1800 深链。
+    let (_root, deep) = deep_a_chain(1_800);
+    assert!(
+        matches(&list, &deep),
+        "1797-unit nested chain over a 1800-deep a-chain must match within budget"
+    );
+}
+
+/// SEL-3：4 层 × 599 单元 ≈ 2400 帧 > 2048 预算——树深足以让无预算
+/// 版本匹配成功，预算版按不匹配降级且快速返回（栈深硬上界，修复前
+/// 嵌套 × 单元数的乘积栈深无界）。
+#[test]
+fn match_stack_budget_degrades_deep_nesting() {
+    let s1 = child_chain(598, "a"); // 599 units
+    let s2 = child_chain(598, &format!(":is({s1})"));
+    let s3 = child_chain(598, &format!(":is({s2})"));
+    let s4 = child_chain(598, &format!(":is({s3})"));
+    let list = parse_a_selector(&s4).expect("parses");
+    // 4 × 599 = 2396 祖先；建 2400 深链（无预算时会匹配）。
+    let (_root, deep) = deep_a_chain(2_400);
+    assert!(
+        !matches(&list, &deep),
+        "2400-frame walk exceeds the 2048 stack budget and must degrade to non-match"
+    );
+}
