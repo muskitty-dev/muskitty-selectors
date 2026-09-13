@@ -36,12 +36,13 @@
 
 use crate::error::SelectorParseError;
 use crate::parser::an_plus_b::parse_an_plus_b;
+use crate::parser::compound::parse_compound_selector;
 use crate::parser::list::{parse_forgiving_selector_list, parse_selector_list};
 use crate::parser::relative::parse_relative_selector_list;
 use crate::types::{
     AttrMatcher, AttrModifier, AttrValue, AttributeSelector, ClassSelector, IdSelector, NsPrefix,
-    NsPrefixKind, PseudoClass, PseudoClassArgument, PseudoElement, SelectorList, TypeSelector,
-    TypeSelectorName, WqName,
+    NsPrefixKind, PseudoClass, PseudoClassArgument, PseudoElement, PseudoElementArgument,
+    SelectorList, TypeSelector, TypeSelectorName, WqName,
 };
 use muskitty_css::parser::TokenStream;
 use muskitty_css::tokenizer::{HashType, Token};
@@ -499,12 +500,29 @@ const KNOWN_PSEUDO_CLASSES: &[&str] = &[
     "not",
     "where",
     "has",
+    // W-3 新增（规范依据见 goal.md 规范依据表）：
+    // - `:state(<custom-ident>)`：selectors-5 §state（L271-296）
+    // - `:heading` / `:heading(<integer>#)`：selectors-5 §heading（L296-330）
+    // - `:has-slotted`：css-shadow-1 §has-slotted（L548-575，功能性形式属
+    //   tentative）
+    "state",
+    "heading",
+    "has-slotted",
+    // W-3 补齐：`:lang()`（selectors-4 §11）与 `:dir()`（§11）此前完全未注册，
+    // 而 WPT parse-part.html / parse-has-slotted.tentative.html 用它们作为
+    // 伪元素/伪类后置的合法样例。
+    "lang",
+    "dir",
 ];
 
-/// 带参数的伪类（§13.3 An+B 族 + §4 逻辑组合族）。这些伪类只接受
-/// 函数形式 `:name(...)`；裸 ident 形式（如 `:has`、`:nth-child`）
-/// 无效。WPT parse-has.html 将 `:has` / `.a:has` / `.a:has b` 全部
-/// 断言为 invalid。
+/// 带参数的伪类（§13.3 An+B 族 + §4 逻辑组合族 + W-3 的 `:state`）。这些
+/// 伪类只接受函数形式 `:name(...)`；裸 ident 形式（如 `:has`、`:nth-child`、
+/// `:state`）无效。WPT parse-has.html 将 `:has` / `.a:has` / `.a:has b`
+/// 全部断言为 invalid；parse-state.html 把裸 `:state` 断言为 invalid。
+///
+/// 注意 `:heading` 与 `:has-slotted` **不在**此列——它们的裸形式合法
+/// （parse-heading.html `:heading`、parse-has-slotted.tentative.html
+/// `:has-slotted` 均为 valid）。
 const PARAMETERISED_PSEUDO_CLASSES: &[&str] = &[
     "nth-child",
     "nth-last-child",
@@ -514,6 +532,10 @@ const PARAMETERISED_PSEUDO_CLASSES: &[&str] = &[
     "where",
     "not",
     "has",
+    "state",
+    // §11：`:lang()` 与 `:dir()` 只接受函数形式（裸 `:lang` / `:dir` 无效）。
+    "lang",
+    "dir",
 ];
 
 /// §14 L4476-4535: Pseudo-elements that accept the legacy single-colon
@@ -614,6 +636,7 @@ pub fn parse_pseudo_class_or_legacy(
     stream: &mut TokenStream,
     has_depth: u8,
     sel_depth: u8,
+    compound_only: bool,
 ) -> Result<PseudoClassOrLegacy, SelectorParseError> {
     // Must start with `:`.
     if !matches!(stream.next_token(), Token::Colon) {
@@ -645,6 +668,7 @@ pub fn parse_pseudo_class_or_legacy(
                 return Ok(PseudoClassOrLegacy::LegacyElement(PseudoElement {
                     name: lower,
                     legacy: true,
+                    argument: None,
                 }));
             }
             // Validate against the known pseudo-class whitelist.
@@ -697,7 +721,13 @@ pub fn parse_pseudo_class_or_legacy(
             }
             // 参数解析失败同样回退到 `:` 之前（流位置回到失败构造起点，
             // mark 弹出），供上层 forgiving 恢复完整跳过该构造。
-            let argument = match parse_pseudo_class_argument(stream, &lower, has_depth, sel_depth) {
+            let argument = match parse_pseudo_class_argument(
+                stream,
+                &lower,
+                has_depth,
+                sel_depth,
+                compound_only,
+            ) {
                 Ok(argument) => argument,
                 Err(e) => {
                     stream.restore_mark();
@@ -782,12 +812,16 @@ fn parse_pseudo_class_argument(
     name: &str,
     has_depth: u8,
     sel_depth: u8,
+    compound_only: bool,
 ) -> Result<PseudoClassArgument, SelectorParseError> {
     match name {
         "nth-child" | "nth-last-child" => {
             // §13.3 L3968 / §13.4 L4077: `An+B [of S]?`. Only nth-child and
             // nth-last-child accept the `of S` clause.
             let an_plus_b = parse_an_plus_b(stream)?;
+            // W-3：An+B 之后允许空白（WPT `:nth-child(2 )` 类形态与
+            // `of` 前的空白）；由 `of S` 解析与收尾检查共用。
+            stream.discard_whitespace();
             let of_s = parse_optional_of_selector_list(stream, has_depth, sel_depth)?;
             Ok(PseudoClassArgument::AnPlusB(an_plus_b, of_s))
         }
@@ -796,7 +830,102 @@ fn parse_pseudo_class_argument(
             // an error — the trailing tokens will be caught by the closing
             // `)` verification step in `parse_pseudo_class_or_legacy`.
             let an_plus_b = parse_an_plus_b(stream)?;
+            // W-3：同 nth-child，An+B 之后允许空白（WPT parse-anplusb.html
+            // `:nth-of-type( +n + 7 )` / `( 23n\n\n+\n\n123 )` 为 valid）。
+            stream.discard_whitespace();
             Ok(PseudoClassArgument::AnPlusB(an_plus_b, None))
+        }
+        // css-shadow-1 §host L325: `:host(<compound-selector>)`。裸 `:host`
+        // 不经过本函数（无参数路径）。参数是单个复合选择器：
+        // `:host(:is(div))` / `:host(:not(.a))` 都合法（内部伪类自带参数），
+        // 但不接受组合器（`compound-selector` 产生式不含 combinator）。
+        // 伪元素不允许（`<compound-selector>` 不含 pseudo-compound-selector）。
+        "host" => {
+            // W-3: 参数是 `compound-selector`，且**递归收紧**——参数内嵌套的
+            // `:is()`/`:where()`/`:not()` 也只接受复合选择器。夹具依据
+            // （parse-not.html / parse-is-where.html）：`:host(:not(.a))` valid、
+            // `:host(:not(.a .b))` invalid、`:host(:is(div .foo))` forgiving-valid
+            // （失败的项被丢弃）。故此处以 compound_only = true 解析。
+            let compound = parse_compound_selector(stream, has_depth, sel_depth + 1, false, true)?;
+            stream.discard_whitespace();
+            Ok(PseudoClassArgument::Compound(compound))
+        }
+        // selectors-5 §state L271-296 / HTML custom state pseudo-class:
+        // 参数是单个 <custom-ident>。`--foo` / `--` / `--0` / `bar` 合法；
+        // number / dimension / function / `:` 开头全部无效（parse-state.html）。
+        "state" => {
+            stream.discard_whitespace();
+            let t = stream.next_token();
+            match t {
+                Token::Ident(_) => {
+                    let ident = stream.consume_token();
+                    stream.discard_whitespace();
+                    Ok(PseudoClassArgument::Raw(vec![ident]))
+                }
+                other => Err(SelectorParseError::InvalidSelector(format!(
+                    ":state() requires a single <custom-ident> argument, got {other:?}"
+                ))),
+            }
+        }
+        // selectors-5 §heading L315-330: `:heading(<level>#)`，其中
+        // `<level>` 是 type flag 为 integer 的 number-token（逗号分隔的整数
+        // 列表）。故 `:heading(2)` / `:heading(0, 1, 2)` / `:heading(-1)` 合法；
+        // `:heading(1.0)`（非整数）/ `:heading(n)`（ident）/ `:heading(2n)`
+        // （dimension）/ `:heading(calc(1))`（函数）/ `:heading(2 of .foo)`
+        // 全部无效（parse-heading.html）。
+        "heading" => {
+            let mut tokens: Vec<Token> = Vec::new();
+            let mut levels = 0usize;
+            loop {
+                stream.discard_whitespace();
+                match stream.next_token() {
+                    Token::CloseParen => break,
+                    // `<level>` = type flag "integer" 的 number-token
+                    Token::Number(ref numeric) if numeric.is_integer => {
+                        tokens.push(stream.consume_token());
+                        levels += 1;
+                    }
+                    other => {
+                        return Err(SelectorParseError::InvalidSelector(format!(
+                            ":heading() takes a comma-separated list of integers, got {other:?}"
+                        )));
+                    }
+                }
+                stream.discard_whitespace();
+                match stream.next_token() {
+                    Token::Comma => {
+                        tokens.push(stream.consume_token());
+                    }
+                    Token::CloseParen => break,
+                    other => {
+                        return Err(SelectorParseError::InvalidSelector(format!(
+                            ":heading() expects ',' or ')' after an integer, got {other:?}"
+                        )));
+                    }
+                }
+            }
+            // `:heading()` 空参数无效（WPT parse-heading.html）：`<level>#` 至少一个。
+            if levels == 0 {
+                return Err(SelectorParseError::InvalidSelector(
+                    ":heading() requires at least one integer level".into(),
+                ));
+            }
+            Ok(PseudoClassArgument::Raw(tokens))
+        }
+        // css-shadow-1 §has-slotted L548-575：**tentative** —— 规范明说
+        // 功能性形式属"未来版本"（"It is expected that a future version of
+        // this specification will introduce a functional ':has-slotted()'"），
+        // 参数文法即夹具自定。本轮取与 `::slotted()` 一致的读法：参数是
+        // **复合选择器**（不接组合器），并递归收紧嵌套的
+        // `:is()`/`:where()`/`:not()`。这样 parse-has-slotted.tentative.html 的
+        // `:has-slotted(div:has(> span))` 合法、`:has-slotted(div > span)` 无效；
+        // 唯一不满足的是 `:has-slotted(div + div)`（夹具称 valid）——同一文法是
+        // 不可能同时接受 `+` 而拒绝 `>` 的，判定为 tentative 夹具自相矛盾，
+        // 记录在 goal.md 与 harness 文档中，该夹具不做硬断言。
+        "has-slotted" => {
+            let compound = parse_compound_selector(stream, has_depth, sel_depth + 1, false, true)?;
+            stream.discard_whitespace();
+            Ok(PseudoClassArgument::Compound(compound))
         }
         // §4.2 L1497-1499 + §4.4 L1617: forgiving-selector-list. Each
         // complex selector parsed independently; failures silently
@@ -806,7 +935,12 @@ fn parse_pseudo_class_argument(
         // 丢弃，整体仍合法）。
         "is" | "where" => {
             let next = checked_selector_nesting(sel_depth)?;
-            let list = parse_forgiving_selector_list(stream, has_depth, next)?;
+            // W-3: forgiving real-selector-list —— 伪元素使该 selector 解析
+            // 失败并被丢弃（WPT `:is(::before)` / `:where(::before)` 为
+            // forgiving-valid）。`compound_only` 由外层透传（`:host()` 参数内
+            // 的 `:is()` 只接受复合选择器，失败项被丢弃）。
+            let list =
+                parse_forgiving_selector_list(stream, has_depth, next, false, compound_only)?;
             Ok(PseudoClassArgument::SelectorList(list))
         }
         // §4.3 L1564-1607: complex-selector-list, non-forgiving.
@@ -816,7 +950,11 @@ fn parse_pseudo_class_argument(
         // 进入；非 forgiving，超限错误向上传播使整条选择器无效。
         "not" => {
             let next = checked_selector_nesting(sel_depth)?;
-            let list = parse_selector_list(stream, has_depth, next)?;
+            // W-3: 非 forgiving 的 real-selector-list —— 伪元素令整条选择器
+            // 无效（WPT parse-not.html `:not(::before)` invalid）。
+            // `compound_only` 透传：`:host(:not(.a .b))` 因此无效
+            // （非 forgiving，内层复合选择器限制的失败向上传播）。
+            let list = parse_selector_list(stream, has_depth, next, false, compound_only)?;
             Ok(PseudoClassArgument::SelectorList(list))
         }
         // §4.5 L1700: relative-selector-list, non-forgiving. Each
@@ -827,7 +965,9 @@ fn parse_pseudo_class_argument(
         // SEL-3：sel_depth + 1 进入。
         "has" => {
             let next = checked_selector_nesting(sel_depth)?;
-            let list = parse_relative_selector_list(stream, has_depth + 1, next)?;
+            // W-3: relative-**real**-selector-list —— selectors-4 §4.5 L1757
+            // "pseudo-elements are not valid selectors within :has()"。
+            let list = parse_relative_selector_list(stream, has_depth + 1, next, false)?;
             Ok(PseudoClassArgument::SelectorList(list))
         }
         _ => {
@@ -881,8 +1021,10 @@ fn parse_optional_of_selector_list(
             // Reuse parse_selector_list from list.rs. has_depth 原样
             // 透传（`:has(:nth-child(2 of :has(..)))` 必须拒绝）。
             // SEL-3：of S 同为选择器列表参数，sel_depth + 1 进入。
+            // W-3：`of S` 是 real-selector-list（§13.3 L4083），伪元素无效。
             let next = checked_selector_nesting(sel_depth)?;
-            let list = crate::parser::list::parse_selector_list(stream, has_depth, next)?;
+            let list =
+                crate::parser::list::parse_selector_list(stream, has_depth, next, false, false)?;
             Ok(Some(list))
         }
         // Anything else after An+B is a structural error.
@@ -935,6 +1077,53 @@ pub fn parse_pseudo_element(
             Ok(Some(PseudoElement {
                 name: lower,
                 legacy: false,
+                argument: None,
+            }))
+        }
+        // W-3：功能性伪元素 `::part(<ident>+)` / `::slotted(<compound-selector>)`。
+        // 裸 ident 形式（`::part` / `::slotted`）**不合法**（WPT
+        // parse-slotted.html 断言 `::slotted` invalid），故这两个名字不在
+        // `is_known_pseudo_element` 里，只在此函数形式分支接受。
+        Token::Function(name) => {
+            let lower = name.to_ascii_lowercase();
+            let argument = match lower.as_str() {
+                "part" => parse_part_argument(stream)?,
+                "slotted" => {
+                    // css-shadow-1 §slotted L456: `::slotted(<compound-selector>)`。
+                    // 单个复合选择器：不消费组合器，收尾 `)` 由调用方检查，
+                    // 因此 `::slotted(a b)` / `::slotted(a > b)` 会在收尾处失败。
+                    // compound_only = true：嵌套的 `:is()`/`:where()`/`:not()`
+                    // 同样只接受复合选择器（夹具 `::slotted(:not(:nth-last-of-type(2)):not([slot="foo"]))`
+                    // 全部为复合形态）。
+                    let compound =
+                        parse_compound_selector(stream, 0, 0, false, true).map_err(|_| {
+                            SelectorParseError::InvalidSelector(
+                                "::slotted() requires a compound selector argument".into(),
+                            )
+                        })?;
+                    stream.discard_whitespace();
+                    PseudoElementArgument::Slotted(compound)
+                }
+                _ => {
+                    stream.restore_mark();
+                    return Err(SelectorParseError::UnknownPseudoElement(name));
+                }
+            };
+            // 收尾 `)`
+            match stream.consume_token() {
+                Token::CloseParen => {}
+                other => {
+                    stream.restore_mark();
+                    return Err(SelectorParseError::UnexpectedToken(format!(
+                        "expected ')' to close ::{lower}(...), got {other:?}"
+                    )));
+                }
+            }
+            stream.discard_mark();
+            Ok(Some(PseudoElement {
+                name: lower,
+                legacy: false,
+                argument: Some(argument),
             }))
         }
         other => {
@@ -945,4 +1134,40 @@ pub fn parse_pseudo_element(
             )))
         }
     }
+}
+
+/// css-shadow-1 §part L1163: `::part() = ::part(<ident>+)`。
+///
+/// 一个或多个 ident（`foo` / `--foo` / `--` / `--0` / `-foo` 均为合法
+/// ident token），以空白分隔、顺序无关；必须至少一个。其他 token
+/// （number / string / block / function）→ 无效（WPT parse-part.html 的
+/// `::part(0)` / `::part('foo')` / `::part([foo])` 均 invalid）。
+///
+/// 收尾 `)` 留给调用方检查；本函数返回时流停在 `)` 前。
+fn parse_part_argument(
+    stream: &mut TokenStream,
+) -> Result<PseudoElementArgument, SelectorParseError> {
+    let mut names: Vec<String> = Vec::new();
+    loop {
+        stream.discard_whitespace();
+        match stream.next_token() {
+            Token::CloseParen => break,
+            Token::Ident(_) => {
+                if let Token::Ident(name) = stream.consume_token() {
+                    names.push(name);
+                }
+            }
+            other => {
+                return Err(SelectorParseError::InvalidSelector(format!(
+                    "::part() takes one or more <ident> names, got {other:?}"
+                )));
+            }
+        }
+    }
+    if names.is_empty() {
+        return Err(SelectorParseError::InvalidSelector(
+            "::part() requires at least one part name".into(),
+        ));
+    }
+    Ok(PseudoElementArgument::Part(names))
 }

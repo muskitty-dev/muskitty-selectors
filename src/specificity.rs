@@ -198,6 +198,19 @@ fn special_pseudo_class_specificity(pc: &PseudoClass) -> Option<Specificity> {
     if pc.name == "where" {
         return Some(Specificity::default());
     }
+    // css-shadow-1 §host L336-343: `:host()` 的特异性 = 一个伪类（0,1,0）
+    // **加上**参数（复合选择器）的特异性——与 `:is()`/`:not()`（只取参数）
+    // 不同，因为 `:host` 本身就在选定元素。裸 `:host` 无参数 → 走默认
+    // 路径（0,1,0）。
+    if pc.name == "host" {
+        return Some(match pc.argument.as_ref() {
+            Some(PseudoClassArgument::Compound(compound)) => {
+                Specificity::new(0, 1, 0) + specificity_of_compound(compound)
+            }
+            // 无参数（裸 `:host`）或其他形态 → None 交给默认路径。
+            _ => return None,
+        });
+    }
     // §17 L4560-4564: `:nth-child` / `:nth-last-child` — pseudo-class
     // base (1×B) plus max of `of S` (if present).
     if matches!(pc.name.as_str(), "nth-child" | "nth-last-child") {

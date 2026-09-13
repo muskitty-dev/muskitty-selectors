@@ -67,7 +67,12 @@ impl Grammar for SelectorGrammar {
         if matches!(stream.next_token(), Token::Eof) {
             return Ok(Err(SelectorParseError::EmptySelector));
         }
-        match list::parse_selector_list(&mut stream, 0, 0) {
+        // W-3：顶层选择器允许伪元素（`pseudo_elements_allowed = true`）且允许
+        // 组合器（`compound_only = false`）；仅 real-selector-list 上下文
+        // （`:is`/`:where`/`:not`/`:has`/`of S`）与 `:host()`/`:has-slotted()`
+        // 的复合选择器参数会收紧，见 parser/compound.rs 与
+        // parser/simple.rs 的 parse_pseudo_class_argument。
+        match list::parse_selector_list(&mut stream, 0, 0, true, false) {
             Ok(list) => {
                 // §3 grammar: trailing tokens after the selector list
                 // (other than whitespace) make the source invalid.
@@ -103,7 +108,9 @@ impl Grammar for RelativeSelectorGrammar {
         if matches!(stream.next_token(), Token::Eof) {
             return Ok(Err(SelectorParseError::EmptySelector));
         }
-        match relative::parse_relative_selector_list(&mut stream, 0, 0) {
+        // W-3：Parse A Relative Selector 的入口（`:has()` 的 API 形态）——
+        // 与 `:has()` 参数一致，伪元素无效（selectors-4 §4.5 L1757）。
+        match relative::parse_relative_selector_list(&mut stream, 0, 0, false) {
             Ok(list) => {
                 stream.discard_whitespace();
                 if !stream.is_empty() {

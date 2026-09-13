@@ -79,17 +79,45 @@ pub fn parse_complex_selector(
     stream: &mut TokenStream,
     has_depth: u8,
     sel_depth: u8,
+    pseudo_elements_allowed: bool,
+    compound_only: bool,
 ) -> Result<ComplexSelector, SelectorParseError> {
     // Build in source order (left-to-right), then reverse so storage
     // is rightmost-first. The combinator goes on the rightward unit
     // (the one just parsed), per the storage convention documented on
     // [`crate::types::ComplexSelector`].
     let mut units: Vec<ComplexSelectorUnit> = Vec::new();
-    let first_compound = parse_compound_selector(stream, has_depth, sel_depth)?;
+    let first_compound = parse_compound_selector(
+        stream,
+        has_depth,
+        sel_depth,
+        pseudo_elements_allowed,
+        compound_only,
+    )?;
     units.push(ComplexSelectorUnit {
         compound: first_compound,
         combinator: None,
     });
+
+    // W-3：compound-only 模式 —— 用于 `:host(<compound-selector>)` 参数及其
+    // **嵌套**的 `:is()`/`:where()`/`:not()` 参数。此时只允许一个复合选择器，
+    // 后面除终止符外任何东西（组合器或另一个复合选择器）都令解析失败。
+    // 夹具依据（parse-is-where.html / parse-not.html）：
+    // `:host(:not(.a))` valid、`:host(:not(.a .b))` invalid、
+    // `:host(:is(div .foo))` forgiving-valid（失败的项被丢弃）、
+    // `:host(:is(.a, .b+.c, .d))` forgiving-valid。
+    if compound_only {
+        stream.discard_whitespace();
+        if !is_complex_terminator(&stream.next_token()) {
+            return Err(SelectorParseError::InvalidSelector(
+                "expected a single compound selector (this argument only accepts \
+                 compound selectors)"
+                    .into(),
+            ));
+        }
+        units.reverse();
+        return Ok(ComplexSelector { units });
+    }
 
     loop {
         // F-4：单元数封顶（每个循环迭代至多追加一个单元）。
@@ -134,7 +162,13 @@ pub fn parse_complex_selector(
                     "trailing combinator in complex selector".into(),
                 ));
             }
-            let next_compound = parse_compound_selector(stream, has_depth, sel_depth)?;
+            let next_compound = parse_compound_selector(
+                stream,
+                has_depth,
+                sel_depth,
+                pseudo_elements_allowed,
+                compound_only,
+            )?;
             // Combinator goes on the new (rightward) unit.
             units.push(ComplexSelectorUnit {
                 compound: next_compound,
@@ -159,7 +193,13 @@ pub fn parse_complex_selector(
 
         // Implicit descendant combinator (§15 L4363). Parse the next
         // compound.
-        let next_compound = parse_compound_selector(stream, has_depth, sel_depth)?;
+        let next_compound = parse_compound_selector(
+            stream,
+            has_depth,
+            sel_depth,
+            pseudo_elements_allowed,
+            compound_only,
+        )?;
         units.push(ComplexSelectorUnit {
             compound: next_compound,
             combinator: Some(Combinator::Descendant),
@@ -169,6 +209,23 @@ pub fn parse_complex_selector(
     // Reverse so storage is rightmost-first: units[0] = subject
     // (rightmost in source), units[len-1] = leftmost in source.
     units.reverse();
+
+    // W-3：伪元素（pseudo-compound）只允许出现在**最右**复合选择器（subject，
+    // units[0]）里。依据：selectors-4 §3 L790-800（pseudo-compound selector 不是
+    // compound selector，"表现得像自带一个组合器"），WPT 夹具把
+    // `::part(foo) + ::part(bar)`、`::slotted(foo) + ::slotted(bar)` 钉为
+    // invalid——浏览器同样只接受 subject 位置的伪元素。反转后统一校验
+    // units[1..]，中间单元里的伪元素（如 `.a .b::before .c`）也能被抓到。
+    for unit in &units[1..] {
+        if !unit.compound.pseudo_compounds.is_empty() {
+            return Err(SelectorParseError::InvalidSelector(
+                "pseudo-elements are only allowed in the rightmost compound \
+                 selector of a complex selector"
+                    .into(),
+            ));
+        }
+    }
+
     Ok(ComplexSelector { units })
 }
 

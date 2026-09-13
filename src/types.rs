@@ -271,8 +271,18 @@ pub enum PseudoClassArgument {
     AnPlusB(AnPlusB, Option<SelectorList>),
     /// For `:is()`, `:not()`, `:where()`, `:has()` — a selector list.
     SelectorList(SelectorList),
-    /// For `:lang(*)`, `:dir(*)`, `:current(*)`, etc. — preserved
-    /// component values for caller-side interpretation.
+    /// For `:host(<compound-selector>)` (css-shadow-1 §host L325) — a
+    /// single compound selector. `:host` itself (no argument) carries
+    /// `None` as its argument.
+    Compound(CompoundSelector),
+    /// For `:lang(*)`, `:dir(*)`, `:current(*)`, `:state(<ident>)`,
+    /// `:heading(<integer>#)` etc. — preserved component values for
+    /// caller-side interpretation.
+    ///
+    /// W-3 新增的两类参数（`:state` 的单个 ident、`:heading()` 的
+    /// `<integer>#`）也走此变体：解析期已按各自语法校验（无效即
+    /// `InvalidSelector`），语义侧（匹配）尚未定义，保留原始 token
+    /// 避免为未实现的匹配语义引入更多类型。
     Raw(Vec<Token>),
 }
 
@@ -302,7 +312,10 @@ pub struct PseudoCompoundSelector {
 }
 
 /// §14 Pseudo-element.
-#[derive(Debug, Clone, PartialEq, Eq)]
+///
+/// `argument` 承载功能性伪元素的参数（W-3）：`::part(<ident>+)` 与
+/// `::slotted(<compound-selector>)`。规范依据见 [`PseudoElementArgument`]。
+#[derive(Debug, Clone, PartialEq)]
 pub struct PseudoElement {
     /// Pseudo-element name as written, lowercased per §3 L1245-1306.
     pub name: String,
@@ -311,4 +324,21 @@ pub struct PseudoElement {
     /// single-colon form recognised for backwards compatibility; false
     /// for the modern `::name` form.
     pub legacy: bool,
+    /// 功能性形式的参数；非功能性（如 `::before`）为 `None`。
+    pub argument: Option<PseudoElementArgument>,
+}
+
+/// 功能性伪元素的参数（W-3）。
+///
+/// 规范依据：`D:\CSSWG\css-shadow-1\Overview.md`
+/// - `::part() = ::part(<ident>+)`（§part L1163）：一个或多个 part 名，
+///   顺序无关（L1198）。
+/// - `::slotted(<compound-selector>)`（§slotted L456）：参数是**单个复合
+///   选择器**（不接受组合器）。
+#[derive(Debug, Clone, PartialEq)]
+pub enum PseudoElementArgument {
+    /// `::part(<ident>+)` —— part 名列表（至少一个）。
+    Part(Vec<String>),
+    /// `::slotted(<compound-selector>)`.
+    Slotted(CompoundSelector),
 }

@@ -30,10 +30,28 @@ use std::path::PathBuf;
 
 /// SEL-2：已修复到全绿的夹具升级为硬断言，防止回归。其余夹具仍为
 /// informational（selectors 74.8% → 的已知缺口按 goal.md 排后续轮）。
+///
+/// W-3 追加：本轮转绿的六个夹具一并纳入硬断言（::part / ::slotted /
+/// :host / :state / :heading / real-selector-list）。**未**纳入的两个：
+/// - `parse-has-slotted.tentative.json`：`div + div` 与 `div > span` 同为
+///   组合器却一个 valid 一个 invalid，同一文法无法同时满足——判定为
+///   tentative 夹具自相矛盾（详见 goal.md 与 src/parser/simple.rs 的
+///   `has-slotted` 分支注释），本实现取"参数为复合选择器"的一致读法，
+///   该夹具保留 1 例已知偏差，故不做硬断言。
+/// - `parse-anplusb.json` / `css-syntax-anb-parsing.json`：An+B 的 28 例
+///   符号保真需要 tokenizer 暴露"number-token 是否带符号"（W-3b），未完成前
+///   不做硬断言。
 const HARD_ASSERT_100: &[&str] = &[
     "parse-has.json",
     "parse-has-disallow-nesting-has-inside-has.json",
     "parse-has-forgiving-selector.json",
+    // W-3（WPT selectors 对齐第一批）
+    "parse-part.json",
+    "parse-slotted.json",
+    "parse-is-where.json",
+    "parse-not.json",
+    "parse-state.json",
+    "parse-heading.json",
 ];
 
 #[derive(Debug, Clone, PartialEq)]

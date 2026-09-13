@@ -223,6 +223,10 @@ fn finish_after_n(
                     })
                 }
                 // `['+'|'-'] <signless-integer>` — Delim then Number.
+                // CSS Syntax §7 L3026-3032: whitespace is allowed on both
+                // sides of the separating `+`/`-`（WPT parse-anplusb.html
+                // `:nth-of-type( +n + 7 )` 与 `( 23n\n\n+\n\n123 )` 为 valid），
+                // 故符号后同样 discard_whitespace。
                 Token::Delim(sign) if sign == '+' || sign == '-' => {
                     stream.discard_token(); // consume sign
                     stream.discard_whitespace();

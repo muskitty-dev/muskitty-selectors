@@ -40,16 +40,27 @@ use muskitty_css::tokenizer::Token;
 /// `has_depth` 是当前 `:has()` 参数嵌套深度（SEL-2，见
 /// [`parse_pseudo_class_or_legacy`]/simple.rs），原样向下游透传。
 /// `sel_depth` 是选择器列表参数嵌套深度（SEL-3），原样向下游透传。
+/// `pseudo_elements_allowed`（W-3）为 `false` 时表示这是 §3 的
+/// `<complex-real-selector-list>` 上下文（`:is`/`:where`/`:not`/`:has`/`of S`），
+/// 伪元素会使该 complex selector 解析失败（forgiving 列表随即丢弃它）。
 pub fn parse_selector_list(
     stream: &mut TokenStream,
     has_depth: u8,
     sel_depth: u8,
+    pseudo_elements_allowed: bool,
+    compound_only: bool,
 ) -> Result<SelectorList, SelectorParseError> {
     let mut selectors = Vec::new();
 
     // Required first complex selector.
     stream.discard_whitespace();
-    selectors.push(parse_complex_selector(stream, has_depth, sel_depth)?);
+    selectors.push(parse_complex_selector(
+        stream,
+        has_depth,
+        sel_depth,
+        pseudo_elements_allowed,
+        compound_only,
+    )?);
 
     // Optional trailing complex selectors separated by commas.
     loop {
@@ -64,7 +75,13 @@ pub fn parse_selector_list(
                         "trailing comma in selector list".into(),
                     ));
                 }
-                selectors.push(parse_complex_selector(stream, has_depth, sel_depth)?);
+                selectors.push(parse_complex_selector(
+                    stream,
+                    has_depth,
+                    sel_depth,
+                    pseudo_elements_allowed,
+                    compound_only,
+                )?);
             }
             _ => break, // terminator or other token — stop, leave it unconsumed.
         }
@@ -90,6 +107,8 @@ pub fn parse_forgiving_selector_list(
     stream: &mut TokenStream,
     has_depth: u8,
     sel_depth: u8,
+    pseudo_elements_allowed: bool,
+    compound_only: bool,
 ) -> Result<SelectorList, SelectorParseError> {
     let mut selectors = Vec::new();
 
@@ -97,7 +116,13 @@ pub fn parse_forgiving_selector_list(
     // First selector — if it fails, just skip it (no preceding comma
     // to consume, the caller manages stream state for non-forgiving
     // invocations).
-    match parse_complex_selector(stream, has_depth, sel_depth) {
+    match parse_complex_selector(
+        stream,
+        has_depth,
+        sel_depth,
+        pseudo_elements_allowed,
+        compound_only,
+    ) {
         Ok(cs) => selectors.push(cs),
         Err(_) => {
             // Best-effort recovery: the spec doesn't precisely
@@ -119,7 +144,13 @@ pub fn parse_forgiving_selector_list(
                     // of list, do not error.
                     break;
                 }
-                match parse_complex_selector(stream, has_depth, sel_depth) {
+                match parse_complex_selector(
+                    stream,
+                    has_depth,
+                    sel_depth,
+                    pseudo_elements_allowed,
+                    compound_only,
+                ) {
                     Ok(cs) => selectors.push(cs),
                     Err(_) => skip_failed_selector_remnants(stream),
                 }

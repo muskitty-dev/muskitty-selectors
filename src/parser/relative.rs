@@ -43,10 +43,14 @@ use muskitty_css::tokenizer::Token;
 ///
 /// `has_depth` 为当前 `:has()` 参数嵌套深度（SEL-2），向下游 complex
 /// 解析透传。`sel_depth` 为选择器列表参数嵌套深度（SEL-3），同样透传。
+/// `pseudo_elements_allowed`（W-3）透传到 complex/compound 解析：`:has()`
+/// 参数是 `relative-real-selector-list`（§4.5 L1757 明说伪元素在 `:has()`
+/// 内无效），故该路径传 `false`。
 pub fn parse_relative_selector(
     stream: &mut TokenStream,
     has_depth: u8,
     sel_depth: u8,
+    pseudo_elements_allowed: bool,
 ) -> Result<ComplexSelector, SelectorParseError> {
     stream.discard_whitespace();
 
@@ -72,8 +76,10 @@ pub fn parse_relative_selector(
         stream.discard_whitespace();
     }
 
-    // Parse the rest as a complex selector.
-    let mut complex = parse_complex_selector(stream, has_depth, sel_depth)?;
+    // Parse the rest as a complex selector. `:has()` 的参数永远是相对选择器
+    // （可含组合器），故 compound_only = false（W-3）。
+    let mut complex =
+        parse_complex_selector(stream, has_depth, sel_depth, pseudo_elements_allowed, false)?;
 
     // Prepend the implicit :scope. The previously-leftmost unit
     // (last in `units`) gets the leading combinator (default Descendant).
@@ -112,10 +118,16 @@ pub fn parse_relative_selector_list(
     stream: &mut TokenStream,
     has_depth: u8,
     sel_depth: u8,
+    pseudo_elements_allowed: bool,
 ) -> Result<SelectorList, SelectorParseError> {
     let mut selectors = Vec::new();
     stream.discard_whitespace();
-    selectors.push(parse_relative_selector(stream, has_depth, sel_depth)?);
+    selectors.push(parse_relative_selector(
+        stream,
+        has_depth,
+        sel_depth,
+        pseudo_elements_allowed,
+    )?);
 
     loop {
         stream.discard_whitespace();
@@ -128,7 +140,12 @@ pub fn parse_relative_selector_list(
                         "trailing comma in relative selector list".into(),
                     ));
                 }
-                selectors.push(parse_relative_selector(stream, has_depth, sel_depth)?);
+                selectors.push(parse_relative_selector(
+                    stream,
+                    has_depth,
+                    sel_depth,
+                    pseudo_elements_allowed,
+                )?);
             }
             _ => break,
         }
